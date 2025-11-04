@@ -42,9 +42,9 @@ const ProposalLanding = () => {
 
           {/* Navigation Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {/* Foundation & Content Plan */}
+            {/* Proposal Overview */}
             <div className="bg-rose-50 rounded-lg p-6 hover:shadow-md transition-shadow border border-rose-100">
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Foundation & Content Plan</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Proposal Overview</h3>
               <p className="text-gray-700 mb-4">
                 Strategy, CLE deck, and deliverables
               </p>
