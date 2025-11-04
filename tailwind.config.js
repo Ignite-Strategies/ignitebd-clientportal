@@ -8,9 +8,9 @@ export default {
     extend: {
       colors: {
         'ignite': {
-          'primary': '#1e40af',
-          'secondary': '#3b82f6',
-          'accent': '#60a5fa',
+          'primary': '#dc2626', // red-600
+          'secondary': '#ea580c', // orange-600
+          'accent': '#f87171', // red-400
         },
       },
       keyframes: {

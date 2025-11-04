@@ -8,6 +8,7 @@ import InteractiveTimeline from '../Components/InteractiveTimeline';
 import CLESpotlight from '../Components/CLESpotlight';
 import FeedbackBox from '../Components/FeedbackBox';
 import ApprovalFooter from '../Components/ApprovalFooter';
+import ScrollToTop from '../Components/ScrollToTop';
 
 const Proposal = () => {
   const [hoveredWeek, setHoveredWeek] = useState(null);
@@ -85,6 +86,9 @@ const Proposal = () => {
 
       {/* Approval Footer */}
       <ApprovalFooter onApprove={handleApprove} />
+
+      {/* Scroll to Top Button */}
+      <ScrollToTop />
     </div>
   );
 };

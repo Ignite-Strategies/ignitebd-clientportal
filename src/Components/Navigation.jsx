@@ -22,9 +22,10 @@ const Navigation = () => {
           <div className="flex items-center">
             <button
               onClick={() => navigate('/')}
-              className="text-xl font-bold text-ignite-primary"
+              className="flex items-center space-x-2 text-lg font-bold text-red-600 hover:text-red-700 transition-colors"
             >
-              Ignite
+              <span className="text-2xl">🔥</span>
+              <span>Ignite</span>
             </button>
           </div>
 
@@ -34,10 +35,10 @@ const Navigation = () => {
               <button
                 key={item.key}
                 onClick={() => navigate(item.path)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   isActive(item.path)
-                    ? 'bg-ignite-primary text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'bg-red-600 text-white shadow-md'
+                    : 'text-gray-700 hover:text-red-600 hover:bg-red-50'
                 }`}
               >
                 {item.label}
