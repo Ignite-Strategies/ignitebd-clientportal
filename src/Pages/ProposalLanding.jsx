@@ -87,7 +87,7 @@ const ProposalLanding = () => {
 
           {/* Reassurance line */}
           <p className="text-sm text-gray-600 text-center italic">
-            Every section below links directly into your live engagement plan. Click any module to explore details.
+            Every section above links directly into your live engagement plan. Click any module to explore details.
           </p>
         </div>
       </div>
