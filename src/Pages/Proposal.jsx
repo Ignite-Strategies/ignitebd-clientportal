@@ -21,17 +21,18 @@ const Proposal = () => {
 
   return (
     <div className={`min-h-screen ${isApproved ? 'opacity-75' : ''}`}>
-      {/* Hero / Header Layer */}
-      <HeroHeader
-        companyName={proposalData.client.company}
-        dateIssued={proposalData.proposal.dateIssued}
-        duration={proposalData.proposal.duration}
-        status={proposalData.proposal.status}
-        purposeHeadline={proposalData.purpose.headline}
-      />
+      {/* Header */}
+      <HeroHeader companyName={proposalData.client.company} />
 
       {/* Purpose Section */}
-      <PurposeSection purpose={proposalData.purpose} />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="prose prose-lg max-w-none">
+          <p className="text-lg leading-relaxed text-gray-800 mb-6">
+            <strong>To successfully onboard {proposalData.purpose.headline}</strong>,{' '}
+            {proposalData.purpose.description}
+          </p>
+        </div>
+      </div>
 
       {/* Scope of Work - Phase Cards */}
       <section id="scope-of-work" className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
