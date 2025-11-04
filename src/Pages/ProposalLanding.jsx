@@ -33,10 +33,10 @@ const ProposalLanding = () => {
           {/* Body Copy */}
           <div className="mb-12">
             <p className="text-gray-700 text-lg leading-relaxed mb-4">
-              It's our pleasure to collaborate with you on this engagement.
+              We're excited to partner with you on this next phase of {proposalData.client.company}'s growth.
             </p>
             <p className="text-gray-700 text-lg leading-relaxed">
-              This interactive proposal outlines our shared roadmap — what we'll build, how we'll execute, and how we'll keep everything transparent from start to finish.
+              This proposal gives you a clear view of what we'll build together — the foundation, integrations, and enrichment work — along with how we'll track progress every step of the way.
             </p>
           </div>
 
