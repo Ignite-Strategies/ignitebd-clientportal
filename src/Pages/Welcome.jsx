@@ -1,90 +1,69 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navigation from '../Components/Navigation';
 import { proposalData } from '../data/mockData';
 
 const Welcome = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      <Navigation />
-      
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Proposal
-            </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Proposal created for {proposalData.client.company}
-            </p>
-          </div>
+    <div className="min-h-screen bg-gray-50">    
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Main Content */}
+        <div className="bg-white rounded-lg shadow-sm p-8 md:p-12">
+          {/* Title */}
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Proposal</h1>
+          <p className="text-lg text-gray-600 mb-8">Proposal created for {proposalData.client.company}</p>
 
-          {/* Intro Copy */}
-          <div className="prose prose-lg max-w-none mb-8 text-gray-700">
-            <p className="text-lg leading-relaxed mb-6">
-              We're excited to partner with you on this engagement. This portal gives you full 
-              transparency into the proposal, timeline, and how we'll work together.
+          {/* Welcome Message */}
+          <div className="mb-12">
+            <p className="text-gray-700 text-lg leading-relaxed mb-4">
+              It's our pleasure to serve you on this engagement. This portal provides full transparency into the proposal, timeline, and how we'll work together.
             </p>
-            <p className="text-lg leading-relaxed">
-              Everything you need is here—no surprises, no hidden details. You can review the 
-              proposal, understand the execution plan, and see exactly how we'll collaborate 
-              throughout the engagement.
+            <p className="text-gray-700 text-lg leading-relaxed">
+              Everything you need is here—no surprises, no hidden details. You can review the proposal, understand the execution plan, and see exactly how we'll collaborate throughout the engagement.
             </p>
           </div>
 
           {/* Navigation Cards */}
-          <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Proposal Overview</h3>
-              <p className="text-sm text-gray-600 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-blue-50 rounded-lg p-6 hover:shadow-md transition-shadow">
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Proposal Overview</h3>
+              <p className="text-gray-700 mb-4">
                 Review project details, scope, deliverables, and pricing
               </p>
               <button
                 onClick={() => navigate('/proposal')}
-                className="text-sm font-medium text-ignite-primary hover:text-ignite-secondary"
+                className="text-red-600 font-medium hover:text-red-700 inline-flex items-center"
               >
                 View Proposal →
               </button>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Timeline & Execution</h3>
-              <p className="text-sm text-gray-600 mb-4">
+            <div className="bg-purple-50 rounded-lg p-6 hover:shadow-md transition-shadow">
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Timeline & Execution</h3>
+              <p className="text-gray-700 mb-4">
                 See key milestones, dates, and project phases
               </p>
               <button
                 onClick={() => navigate('/timeline')}
-                className="text-sm font-medium text-ignite-primary hover:text-ignite-secondary"
+                className="text-red-600 font-medium hover:text-red-700 inline-flex items-center"
               >
                 View Timeline →
               </button>
             </div>
 
-            <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">How We'll Work Together</h3>
-              <p className="text-sm text-gray-600 mb-4">
+            <div className="bg-green-50 rounded-lg p-6 hover:shadow-md transition-shadow">
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">How We'll Work Together</h3>
+              <p className="text-gray-700 mb-4">
                 Understand our working principles and collaboration approach
               </p>
               <button
                 onClick={() => navigate('/how-we-work')}
-                className="text-sm font-medium text-ignite-primary hover:text-ignite-secondary"
+                className="text-red-600 font-medium hover:text-red-700 inline-flex items-center"
               >
                 Learn More →
               </button>
             </div>
-          </div>
-
-          {/* CTA Button */}
-          <div className="text-center">
-            <button
-              onClick={() => navigate('/proposal')}
-              className="bg-ignite-primary hover:bg-ignite-secondary text-white font-semibold px-8 py-4 rounded-lg text-lg transition-colors shadow-lg hover:shadow-xl"
-            >
-              View Proposal
-            </button>
           </div>
         </div>
       </div>
