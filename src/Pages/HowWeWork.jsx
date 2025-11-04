@@ -1,100 +1,70 @@
 import React from 'react';
-import Navigation from '../Components/Navigation';
-import { mockWorkingPrinciples, mockTeamData } from '../data/mockData';
+import { proposalData } from '../data/mockData';
 
 const HowWeWork = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      <Navigation />
-      
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 text-center">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            How We'll Work Together
-          </h1>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Direct, transparent, and fast. This is how we stay aligned and deliver results.
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Integrations & Collaboration</h1>
+          <p className="text-lg text-gray-600">Access deliverables and provide feedback in this portal</p>
+        </div>
+
+        {/* Workbench Description */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Deliverables Workbench</h2>
+          <p className="text-gray-700 mb-4">
+            This portal is your central hub for accessing all deliverables throughout the engagement. 
+            You'll have real-time access to documents, assets, and work in progress.
+          </p>
+          <p className="text-gray-700">
+            Provide feedback directly on deliverables using the comment and feedback tools below. 
+            All changes and updates are tracked transparently in this space.
           </p>
         </div>
 
-        {/* Main Copy */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-          <div className="prose prose-lg max-w-none text-gray-700 space-y-6">
-            <p className="text-lg leading-relaxed">
-              <strong>You'll have access to this portal at all times.</strong> Everything about 
-              your engagement—proposals, timelines, deliverables, and progress—is visible here. 
-              No need to email back and forth for updates.
-            </p>
-            <p className="text-lg leading-relaxed">
-              <strong>If you want something modified, you can comment or edit directly in here.</strong> 
-              We've built this portal to be collaborative. Need changes? Have questions? It all 
-              happens transparently in this space.
-            </p>
-            <p className="text-lg leading-relaxed font-semibold text-ignite-primary">
-              We move fast and transparently—this is how we stay aligned.
-            </p>
-          </div>
-        </div>
-
-        {/* Working Principles */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Working Principles</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            {mockWorkingPrinciples.map((principle, index) => (
-              <div
-                key={index}
-                className="bg-gradient-to-br from-gray-50 to-blue-50 p-6 rounded-xl border border-gray-200 hover:shadow-md transition-shadow"
-              >
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                  {principle.title}
-                </h3>
-                <p className="text-gray-700 leading-relaxed">
-                  {principle.description}
-                </p>
+        {/* Deliverables Section */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Deliverables by Phase</h2>
+          <div className="space-y-4">
+            {proposalData.phases.map((phase) => (
+              <div key={phase.id} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                    phase.color === 'red' ? 'bg-red-100 text-red-800' :
+                    phase.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-purple-100 text-purple-800'
+                  }`}>
+                    Phase {phase.id}: {phase.name}
+                  </span>
+                  <span className="text-sm text-gray-600">Weeks {phase.weeks}</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {phase.deliverables.map((deliverable, idx) => (
+                    <div key={idx} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                      <span className="text-gray-400">📄</span>
+                      <span className="text-gray-700">{deliverable}</span>
+                      <span className="ml-auto text-sm text-gray-500">View →</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Meet Your Team */}
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Meet Your Team</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {mockTeamData.teamMembers.map((member) => (
-              <div
-                key={member.id}
-                className="bg-gradient-to-br from-purple-50 to-blue-50 p-6 rounded-xl border border-purple-200 text-center hover:shadow-md transition-shadow"
-              >
-                <div className="text-5xl mb-4">{member.avatar}</div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                  {member.name}
-                </h3>
-                <p className="text-sm font-medium text-ignite-primary mb-3">
-                  {member.role}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {member.bio}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Portal Access Note */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl shadow-lg p-6 mt-8 border border-blue-200">
-          <div className="flex items-start">
-            <div className="text-2xl mr-4">💡</div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">
-                Portal Access
-              </h3>
-              <p className="text-gray-700 text-sm">
-                This portal is your single source of truth. Bookmark it, check it anytime, 
-                and use it to stay aligned with your engagement. All updates, documents, 
-                and communications will be centralized here.
-              </p>
-            </div>
+        {/* Feedback Section */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4">Provide Feedback</h2>
+          <p className="text-gray-700 mb-4">
+            Use this portal to review deliverables and provide feedback. Your comments and suggestions 
+            will be visible to the team in real-time, keeping everything transparent and collaborative.
+          </p>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <p className="text-sm text-gray-600">
+              💡 <strong>Tip:</strong> Click on any deliverable above to access it and leave feedback directly on the document or asset.
+            </p>
           </div>
         </div>
       </div>
