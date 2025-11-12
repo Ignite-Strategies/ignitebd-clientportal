@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import Image from 'next/image';
 import api from '@/lib/api';
 
-export default function WelcomePage() {
+function WelcomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -142,3 +142,17 @@ export default function WelcomePage() {
   );
 }
 
+export default function WelcomePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-red-600 via-red-700 to-red-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-4" />
+          <p className="text-white text-xl">Loading...</p>
+        </div>
+      </div>
+    }>
+      <WelcomeContent />
+    </Suspense>
+  );
+}
