@@ -1,33 +1,31 @@
 {
   "name": "ignitebd-clientportal",
   "version": "2.0.0",
+  "private": true,
   "description": "Ignite Client Portal - Self-contained Next.js app for client-facing proposal and engagement portal",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint",
+    "prisma": "prisma"
   },
   "keywords": ["ignite", "client", "portal", "proposal", "nextjs"],
   "author": "Ignite Strategies",
   "license": "ISC",
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "next": "^14.0.0",
     "@prisma/client": "^6.19.0",
-    "prisma": "^6.19.0",
+    "axios": "^1.13.2",
     "firebase": "^12.5.0",
-    "axios": "^1.13.2"
+    "next": "16.0.1",
+    "prisma": "^6.19.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.18",
-    "typescript": "^5.0.0",
-    "prisma": "^5.0.0"
+    "@tailwindcss/postcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.1",
+    "tailwindcss": "^4"
   }
 }
