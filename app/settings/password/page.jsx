@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import Image from 'next/image';
+
+// Dynamic import for Firebase to avoid SSR issues
+let updatePassword, reauthenticateWithCredential, EmailAuthProvider, auth;
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -13,9 +15,34 @@ export default function ChangePasswordPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [firebaseLoaded, setFirebaseLoaded] = useState(false);
+
+  // Load Firebase on client side only
+  useEffect(() => {
+    const loadFirebase = async () => {
+      try {
+        const firebaseAuth = await import('firebase/auth');
+        const firebaseLib = await import('@/lib/firebase');
+        updatePassword = firebaseAuth.updatePassword;
+        reauthenticateWithCredential = firebaseAuth.reauthenticateWithCredential;
+        EmailAuthProvider = firebaseAuth.EmailAuthProvider;
+        auth = firebaseLib.auth;
+        setFirebaseLoaded(true);
+      } catch (err) {
+        console.error('Failed to load Firebase:', err);
+        setError('Failed to load authentication. Please refresh the page.');
+      }
+    };
+    loadFirebase();
+  }, []);
 
   const handleChangePassword = async (event) => {
     event.preventDefault();
+    if (!firebaseLoaded) {
+      setError('Authentication not ready. Please wait...');
+      return;
+    }
+
     setError('');
     setSuccess(false);
 
@@ -59,6 +86,17 @@ export default function ChangePasswordPage() {
       setUpdating(false);
     }
   };
+
+  if (!firebaseLoaded) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-red-600 mx-auto mb-4" />
+          <p className="text-gray-600 text-xl">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -149,4 +187,3 @@ export default function ChangePasswordPage() {
     </div>
   );
 }
-
