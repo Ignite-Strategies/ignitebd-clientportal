@@ -1,21 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <!-- Background circle -->
-  <circle cx="50" cy="50" r="48" fill="#DC2626" stroke="#991B1B" stroke-width="2"/>
+  <defs>
+    <linearGradient id="handshakeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#DC2626;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#B91C1C;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="48" fill="url(#handshakeGrad)" stroke="#991B1B" stroke-width="2"/>
   
-  <!-- Handshake/Partnership icon - simplified -->
+  <!-- Handshake icon -->
   <g transform="translate(50, 50)">
     <!-- Left hand -->
-    <path d="M -20 -5 L -15 -15 L -10 -10 L -5 -15 L 0 -10 L 5 -15 L 10 -10 L 15 -15 L 20 -5 L 20 5 L 15 10 L 10 5 L 5 10 L 0 5 L -5 10 L -10 5 L -15 10 Z" 
-          fill="white" opacity="0.9"/>
+    <path d="M -25 -8 L -20 -15 L -15 -10 L -10 -15 L -5 -10 L 0 -15 L 5 -10 L 10 -15 L 15 -10 L 20 -15 L 25 -8 L 25 2 L 20 7 L 15 2 L 10 7 L 5 2 L 0 7 L -5 2 L -10 7 L -15 2 L -20 7 Z" 
+          fill="white" opacity="0.95" transform="rotate(-15)"/>
     
     <!-- Right hand (mirrored) -->
-    <path d="M 20 -5 L 15 -15 L 10 -10 L 5 -15 L 0 -10 L -5 -15 L -10 -10 L -15 -15 L -20 -5 L -20 5 L -15 10 L -10 5 L -5 10 L 0 5 L 5 10 L 10 5 L 15 10 Z" 
-          fill="white" opacity="0.9"/>
+    <path d="M 25 -8 L 20 -15 L 15 -10 L 10 -15 L 5 -10 L 0 -15 L -5 -10 L -10 -15 L -15 -10 L -20 -15 L -25 -8 L -25 2 L -20 7 L -15 2 L -10 7 L -5 2 L 0 7 L 5 2 L 10 7 L 15 2 L 20 7 Z" 
+          fill="white" opacity="0.95" transform="rotate(15)"/>
     
-    <!-- Connection point -->
-    <circle cx="0" cy="0" r="3" fill="white"/>
+    <!-- Connection/grip point -->
+    <circle cx="0" cy="0" r="4" fill="white" opacity="0.9"/>
+    <circle cx="-3" cy="-2" r="2" fill="#DC2626"/>
+    <circle cx="3" cy="-2" r="2" fill="#DC2626"/>
   </g>
-  
-  <!-- Alternative: Simple partnership/trust symbol -->
-  <!-- Two overlapping circles or a handshake icon -->
 </svg>
