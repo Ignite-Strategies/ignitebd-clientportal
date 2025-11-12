@@ -4,9 +4,9 @@ export const metadata = {
   title: 'Ignite Client Portal',
   description: 'Your engagement hub for proposals and deliverables',
   icons: {
-    icon: '/icon.svg',
-    shortcut: '/icon.svg',
-    apple: '/icon.svg',
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
   },
 };
 
