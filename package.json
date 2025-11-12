@@ -10,13 +10,21 @@
     "lint": "eslint",
     "prisma": "prisma"
   },
-  "keywords": ["ignite", "client", "portal", "proposal", "nextjs"],
+  "keywords": [
+    "ignite",
+    "client",
+    "portal",
+    "proposal",
+    "nextjs"
+  ],
   "author": "Ignite Strategies",
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^6.19.0",
     "axios": "^1.13.2",
+    "bcryptjs": "^3.0.3",
     "firebase": "^12.5.0",
+    "jsonwebtoken": "^9.0.2",
     "next": "16.0.1",
     "prisma": "^6.19.0",
     "react": "19.2.0",
