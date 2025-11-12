@@ -73,7 +73,7 @@ export default function ClientPortalDashboard() {
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold text-white">Client Portal</h1>
             <div className="flex items-center gap-4">
-              <nav className="flex gap-4">
+            <nav className="flex gap-4">
               <button className="text-sm font-medium text-gray-300 hover:text-white">
                 Foundational Work
               </button>
@@ -89,7 +89,7 @@ export default function ClientPortalDashboard() {
               >
                 Settings
               </button>
-              </nav>
+            </nav>
               <div className="flex items-center gap-2">
                 <Image
                   src="/logo.png"
