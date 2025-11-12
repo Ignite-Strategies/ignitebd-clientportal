@@ -71,7 +71,14 @@ function ResetPasswordForm() {
     }
   };
 
-  if (!oobCode && !error) {
+  // Show loading state while checking for oobCode
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || (!oobCode && !error)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800 flex items-center justify-center">
         <div className="text-center">
