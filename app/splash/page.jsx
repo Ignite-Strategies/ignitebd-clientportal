@@ -1,19 +1,48 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function SplashPage() {
   const router = useRouter();
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // Simple redirect after 2 seconds - no auth check
-    const timer = setTimeout(() => {
-      router.replace('/login');
+    let unsubscribe;
+    const timer = setTimeout(async () => {
+      try {
+        // Dynamically import Firebase to avoid SSR issues
+        const { onAuthStateChanged } = await import('firebase/auth');
+        const { auth } = await import('@/lib/firebase');
+        
+        if (auth) {
+          unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+              router.replace('/welcome');
+            } else {
+              router.replace('/login');
+            }
+          });
+        } else {
+          // No auth available, go to login
+          router.replace('/login');
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+        // On error, just go to login
+        router.replace('/login');
+      } finally {
+        setChecking(false);
+      }
     }, 2000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [router]);
 
   return (
