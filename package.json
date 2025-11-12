@@ -1,7 +1,6 @@
 {
   "name": "ignitebd-clientportal",
   "version": "2.0.0",
-  "type": "module",
   "description": "Ignite Client Portal - Self-contained Next.js app for client-facing proposal and engagement portal",
   "scripts": {
     "dev": "next dev",
