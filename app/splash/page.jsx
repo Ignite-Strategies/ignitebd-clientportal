@@ -3,34 +3,28 @@
 import Image from 'next/image';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 
 export default function SplashPage() {
   const router = useRouter();
 
   useEffect(() => {
-    let unsubscribe;
+    // Simple redirect after 2 seconds - no auth check
     const timer = setTimeout(() => {
-      unsubscribe = onAuthStateChanged(auth, (user) => {
-        if (user) {
-          router.replace('/welcome');
-        } else {
-          router.replace('/login');
-        }
-      });
+      router.replace('/login');
     }, 2000);
 
-    return () => {
-      clearTimeout(timer);
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
+    return () => clearTimeout(timer);
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-600 via-red-700 to-red-800 flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center relative">
+      {/* Powered by badge - top right */}
+      <div className="absolute top-6 right-6">
+        <p className="text-sm text-gray-400">
+          powered by <span className="font-semibold text-gray-300">IgniteStrategies</span>
+        </p>
+      </div>
+
       <div className="text-center">
         <Image
           src="/logo.png"
@@ -41,16 +35,15 @@ export default function SplashPage() {
           priority
         />
         <h1 className="text-4xl font-bold text-white mb-2">
-          Ignite Client Portal
+          Welcome to Client Portal
         </h1>
-        <p className="text-xl text-white/80 mb-4">
+        <p className="text-xl text-gray-400 mb-4">
           by Ignite Strategies
         </p>
-        <p className="text-lg text-white/60">
+        <p className="text-lg text-gray-500">
           Your engagement hub
         </p>
       </div>
     </div>
   );
 }
-
