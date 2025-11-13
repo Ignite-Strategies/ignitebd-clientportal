@@ -65,9 +65,26 @@ function SetPasswordContent() {
 
       if (data?.success) {
         setSuccess(true);
-        setTimeout(() => {
-          router.push('/login?activated=true');
-        }, 2000);
+        
+        // Auto-sign in with Firebase after password is set
+        try {
+          const { signInWithEmailAndPassword } = await import('firebase/auth');
+          const { auth } = await import('@/lib/firebase');
+          
+          // Sign in with the email and password they just set
+          await signInWithEmailAndPassword(auth, email || '', password);
+          
+          // Redirect to welcome (will auto-hydrate contact)
+          setTimeout(() => {
+            router.push('/welcome');
+          }, 1500);
+        } catch (signInError) {
+          console.error('Auto-sign in failed:', signInError);
+          // Fallback: redirect to login if auto-sign in fails
+          setTimeout(() => {
+            router.push('/login?activated=true');
+          }, 2000);
+        }
       } else {
         setError(data?.error || 'Failed to set password');
       }
