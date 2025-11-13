@@ -4,6 +4,8 @@
 
 **Universal Personhood** is the architectural principle that a single Firebase UID represents a user across all applications in the Ignite ecosystem. One person = One Firebase UID = One Contact record = Access everywhere.
 
+**CRITICAL:** Both the main app and client portal call the **SAME DATABASE**. They share the same PostgreSQL database via Prisma. This is why universal personhood works - there's only ONE Contact record, and both apps read/write to it.
+
 ## Core Concept
 
 ```
@@ -42,6 +44,8 @@ model Contact {
 
 ### The Universal Identity Flow
 
+**KEY POINT:** Both apps call the **SAME DATABASE**. Same PostgreSQL instance, same `Contact` table, same `firebaseUid` field.
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    Main App (app.ignitegrowth.biz)           │
@@ -50,15 +54,28 @@ model Contact {
 │  2. Create Firebase User                                    │
 │  3. Store firebaseUid in Contact.firebaseUid                │
 │                                                             │
-│  Contact {                                                  │
+│  Prisma → SAME DATABASE → Contact {                         │
 │    id: "contact-123"                                        │
 │    firebaseUid: "firebase-abc-xyz"  ← THE BRIDGE           │
 │    email: "john@example.com"                               │
 │  }                                                          │
 └─────────────────────────────────────────────────────────────┘
                               │
-                              │ Shared Database
-                              │ (PostgreSQL)
+                              │
+                    ┌─────────┴─────────┐
+                    │                   │
+                    │  SAME DATABASE    │
+                    │  (PostgreSQL)     │
+                    │                   │
+                    │  Contact Table    │
+                    │  {                │
+                    │    id: "contact-123"│
+                    │    firebaseUid:    │
+                    │      "firebase-abc-xyz"│
+                    │  }                │
+                    │                   │
+                    └─────────┬─────────┘
+                              │
                               │
 ┌─────────────────────────────┴─────────────────────────────┐
 │              Client Portal (clientportal.ignitegrowth.biz) │
@@ -69,23 +86,27 @@ model Contact {
 │                                                           │
 │  Firebase Auth → firebaseUid: "firebase-abc-xyz"          │
 │       ↓                                                   │
-│  Database Query: Contact.findUnique({                     │
+│  Prisma → SAME DATABASE → Contact.findUnique({           │
 │    where: { firebaseUid: "firebase-abc-xyz" }            │
 │  })                                                       │
 │       ↓                                                   │
 │  Found: Contact { id: "contact-123", ... }               │
 │                                                           │
-│  ✅ Same person, same identity, different app            │
+│  ✅ Same database, same Contact record, same person!    │
 └───────────────────────────────────────────────────────────┘
 ```
+
+**The Magic:** Both apps use the same `DATABASE_URL` environment variable. They're literally querying the same PostgreSQL database, the same `contacts` table, the same `firebaseUid` field. That's why it works!
 
 ## Why This Matters
 
 ### 1. **Single Source of Truth**
-- Contact data lives in ONE place (database)
+- Contact data lives in ONE place (the shared database)
+- **Both apps read/write to the SAME database**
 - Firebase UID is the universal identifier
 - No duplicate user records
 - No sync issues between apps
+- **Same `DATABASE_URL` = Same database = Same data**
 
 ### 2. **Seamless Cross-App Experience**
 - User logs into main app → sees their data
@@ -482,10 +503,22 @@ await prisma.contact.update({
 
 **The Bridge:** `firebaseUid` field in `Contact` table
 
-**The Flow:**
-1. Main app creates contact → Sets `firebaseUid`
-2. Client portal authenticates → Looks up by `firebaseUid`
-3. ✅ Same person, universal identity
+**The Shared Database:**
+- **Both apps call the SAME DATABASE** (same PostgreSQL instance)
+- Same `DATABASE_URL` environment variable
+- Same `Contact` table
+- Same `firebaseUid` field
+- **No data sync needed - it's the same data!**
 
-**Key Point:** Once `firebaseUid` exists in the database, the client portal (and any future apps) can operate completely independently. No ongoing communication between apps needed - just query by `firebaseUid`!
+**The Flow:**
+1. Main app creates contact → Sets `firebaseUid` in **THE DATABASE**
+2. Client portal authenticates → Looks up by `firebaseUid` in **THE SAME DATABASE**
+3. ✅ Same database, same Contact record, same person!
+
+**Key Point:** Once `firebaseUid` exists in the database, the client portal (and any future apps) can operate completely independently. No ongoing communication between apps needed - they both just query **THE SAME DATABASE** by `firebaseUid`!
+
+**The Critical Understanding:** 
+- Main app writes to database → Sets `firebaseUid`
+- Client portal reads from database → Finds contact by `firebaseUid`
+- **It's the SAME database, so it just works!**
 
