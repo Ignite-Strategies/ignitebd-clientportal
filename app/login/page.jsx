@@ -72,8 +72,8 @@ function LoginForm() {
         // Firebase token is automatically managed by axios interceptor
         // No need to store manually - axios will get fresh token on each request
         
-        // Redirect to welcome (Step 1: Contact hydration)
-        router.push('/welcome');
+        // Redirect directly to dashboard (skip welcome for now)
+        router.push('/dashboard');
       } else {
         setError('Contact not found. Please ensure your account is activated.');
       }
