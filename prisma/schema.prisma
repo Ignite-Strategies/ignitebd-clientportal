@@ -117,8 +117,9 @@ model ContactList {
 }
 
 model Contact {
-  id               String       @id @default(cuid())
+  id               String                  @id @default(cuid())
   crmId            String // CompanyHQId (tenant identifier) - renamed from companyId for clarity
+  firebaseUid      String?                 @unique // Firebase UID - bridge between Firebase Auth and Contact
   firstName        String?
   lastName         String?
   goesBy           String?
@@ -130,14 +131,18 @@ model Contact {
   howMet           String?
   notes            String? // Notes/context about the contact
   contactListId    String?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  companyHQ        CompanyHQ    @relation(fields: [crmId], references: [id])
-  contactCompany   Company?     @relation(fields: [contactCompanyId], references: [id])
-  contactList      ContactList? @relation(fields: [contactListId], references: [id])
+  role             String? // Contact role: "contact" | "owner" (for elevation flow)
+  ownerId          String? // If elevated to owner, link to Owner record
+  isActivated      Boolean                 @default(false) // Whether contact has activated portal access
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  companyHQ        CompanyHQ               @relation(fields: [crmId], references: [id])
+  contactCompany   Company?                @relation(fields: [contactCompanyId], references: [id])
+  contactList      ContactList?            @relation(fields: [contactListId], references: [id])
   pipeline         Pipeline?
   deliverables     ConsultantDeliverable[]
 
+  @@index([firebaseUid]) // Index for fast lookups
   @@map("contacts")
 }
 
@@ -232,32 +237,32 @@ model Persona {
 }
 
 model ConsultantDeliverable {
-  id          String   @id @default(cuid())
-  contactId   String   // Link to Contact (the client)
-  contact    Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  
+  id        String  @id @default(cuid())
+  contactId String // Link to Contact (the client)
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
   // What we're delivering
   title       String
   description String?
   category    String? // "foundation", "integration", "enrichment", etc.
-  
+
   // Status tracking
-  status      String   @default("pending") // "pending" | "in-progress" | "completed" | "blocked"
-  
+  status String @default("pending") // "pending" | "in-progress" | "completed" | "blocked"
+
   // Link to proposal/milestone
   proposalId  String?
   proposal    Proposal? @relation(fields: [proposalId], references: [id], onDelete: SetNull)
   milestoneId String? // Reference to milestone in Proposal.milestones JSON (e.g., "milestone-1", "week-4")
-  
+
   // Delivery tracking
   dueDate     DateTime?
   completedAt DateTime?
   notes       String?
-  
+
   // Metadata
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([contactId])
   @@index([proposalId])
   @@map("consultant_deliverables")
