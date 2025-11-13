@@ -10,6 +10,8 @@ export default function ClientPortalDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [portalData, setPortalData] = useState(null);
+  const [contactRole, setContactRole] = useState(null);
+  const [promoting, setPromoting] = useState(false);
 
   useEffect(() => {
     const firebaseUser = auth.currentUser;
@@ -24,6 +26,16 @@ export default function ClientPortalDashboard() {
         if (!contactId) {
           router.replace('/login');
           return;
+        }
+
+        // Get contact role to check if they're already an owner
+        try {
+          const contactResponse = await api.get(`/api/contacts/by-firebase-uid`);
+          if (contactResponse.data?.success && contactResponse.data.contact) {
+            setContactRole(contactResponse.data.contact.role || 'contact');
+          }
+        } catch (err) {
+          console.warn('Could not fetch contact role:', err);
         }
 
         // Get proposalId or find proposals for this contact
@@ -53,6 +65,29 @@ export default function ClientPortalDashboard() {
 
     loadDashboard();
   }, [router]);
+
+  const handlePromoteToOwner = async () => {
+    if (!window.confirm('Are you ready to get your own IgniteBD stack? This will create your own workspace where you can manage your business development.')) {
+      return;
+    }
+
+    setPromoting(true);
+    try {
+      const response = await api.post('/api/promote-to-owner');
+      if (response.data?.success) {
+        alert('Congratulations! You now have your own IgniteBD workspace. Redirecting...');
+        // Redirect to their new stack (would need to implement this route)
+        window.location.href = '/stack';
+      } else {
+        alert(response.data?.error || 'Failed to promote to owner');
+      }
+    } catch (error) {
+      console.error('Error promoting to owner:', error);
+      alert(error.response?.data?.error || 'Failed to promote to owner. Please try again.');
+    } finally {
+      setPromoting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -137,6 +172,29 @@ export default function ClientPortalDashboard() {
                 </p>
               </div>
             </div>
+
+            {/* Elevation CTA - Only show if contact is not already an owner */}
+            {contactRole !== 'owner' && (
+              <div className="mb-8 bg-gradient-to-r from-red-600 to-amber-500 border border-red-500 rounded-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-white mb-2">
+                      Ready for Your Own Stack?
+                    </h3>
+                    <p className="text-white/90">
+                      Get your own IgniteBD workspace to manage your business development.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handlePromoteToOwner}
+                    disabled={promoting}
+                    className="px-6 py-3 bg-white text-red-600 font-semibold rounded-lg hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {promoting ? 'Setting Up...' : "I'm Ready For My Stack"}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Deliverables List */}
             <div className="bg-gray-900 border border-gray-700 rounded-lg">
