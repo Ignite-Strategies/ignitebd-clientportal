@@ -22,12 +22,11 @@ function ActivateContent() {
     }
 
     // Validate token and get firebaseUid
-    // Note: This calls the main app's API (not client portal's API)
+    // CLIENT PORTAL: Calls its own API route
     const activate = async () => {
       try {
-        // Call main app API - need to use full URL or configure baseURL
-        const mainAppUrl = process.env.NEXT_PUBLIC_MAIN_APP_URL || 'https://app.ignitegrowth.biz';
-        const response = await fetch(`${mainAppUrl}/api/activate`, {
+        // Call client portal's own API route
+        const response = await fetch('/api/activate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token }),

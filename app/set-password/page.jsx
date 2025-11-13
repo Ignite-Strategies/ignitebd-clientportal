@@ -49,9 +49,8 @@ function SetPasswordContent() {
     setError('');
 
     try {
-      // Call main app API - need to use full URL
-      const mainAppUrl = process.env.NEXT_PUBLIC_MAIN_APP_URL || 'https://app.ignitegrowth.biz';
-      const response = await fetch(`${mainAppUrl}/api/set-password`, {
+      // CLIENT PORTAL: Calls its own API route
+      const response = await fetch('/api/set-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uid, password, contactId }),
