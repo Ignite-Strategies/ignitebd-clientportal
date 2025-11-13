@@ -73,7 +73,21 @@ function LoginForm() {
       }
     } catch (error) {
       console.error('Contact login failed:', error);
-      setError(error.message || 'Sign-in failed. Please check your credentials.');
+      
+      // Handle specific Firebase auth errors
+      let errorMessage = 'Sign-in failed. Please check your credentials.';
+      
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+        errorMessage = 'Invalid email or password. If you just activated your account, make sure you\'re using the password you set.';
+      } else if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found for this email. Please use your activation link to set up your account first.';
+      } else if (error.code === 'auth/user-disabled') {
+        errorMessage = 'This account has been disabled. Please contact support.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsSigningIn(false);
     }
