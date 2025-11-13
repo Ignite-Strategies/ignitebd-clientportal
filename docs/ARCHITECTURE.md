@@ -14,6 +14,29 @@ The Ignite Client Portal is a **completely self-contained Next.js application** 
 2. **Independence** - Client portal can be deployed, scaled, and maintained separately
 3. **Security** - Each app has its own API layer with appropriate security boundaries
 4. **Simplicity** - No complex CORS configuration, no preflight requests, no origin whitelisting
+5. **Standalone Operation** - Once `firebaseUid` exists in the database, client portal is completely independent
+
+### The Magic: Firebase UID in Database
+
+**CRITICAL:** Once a contact has a `firebaseUid` in the database, the client portal is **100% standalone** and doesn't need the main app at all!
+
+**How it works:**
+1. Main app creates contact and sets up Firebase user → `firebaseUid` stored in `Contact.firebaseUid`
+2. Client portal uses Firebase Auth (client-side) to authenticate user
+3. Client portal API routes verify Firebase token (server-side) and look up contact by `firebaseUid`
+4. **That's it!** No communication with main app needed
+
+**The Flow:**
+```
+Main App (One-time setup):
+  Contact created → Firebase user created → firebaseUid stored in DB
+                    ↓
+Client Portal (Standalone):
+  User logs in with Firebase → Token verified → Contact found by firebaseUid
+  → Full access to proposals, deliverables, etc.
+```
+
+**Key Point:** The `firebaseUid` field in the database is the **bridge** between Firebase Auth and your Contact record. Once that's set, the client portal operates completely independently.
 
 ## Architecture Diagram
 
@@ -370,9 +393,12 @@ npm run dev
 - ✅ Own deployment (separate Vercel project)
 - ✅ Shared database (via Prisma)
 - ✅ Shared Firebase project (for auth)
+- ✅ **100% Standalone** - Once `firebaseUid` exists in DB, no main app needed
 - ❌ NO external API calls
 - ❌ NO CORS configuration needed
 - ❌ NO cross-origin requests
 
 **Result:** Simpler, more secure, easier to maintain, zero CORS issues.
+
+**The Key:** The `firebaseUid` field in the `Contact` table is the **only connection** needed. Once it's set (by main app during contact creation), the client portal operates completely independently. No ongoing communication between apps required!
 
