@@ -40,17 +40,22 @@ function WelcomeContent() {
       /**
        * Step 1: Contact Lookup/Retrieval (First Hydration)
        * - User is authenticated via Firebase
-       * - Lookup contact by firebaseUid
+       * - Call client hydration endpoint
        * - Store contact info for Step 2
        */
       const hydrateContact = async () => {
         try {
-          // Step 1: Get contact by Firebase UID (CLIENT PORTAL ROUTE)
-          const contactResponse = await api.get(`/api/contacts/by-firebase-uid`);
+          // Step 1: Call client hydration endpoint (hydrates contact + company + proposals)
+          const hydrationResponse = await api.get(`/api/client/hydrate`);
           
-          if (contactResponse.data?.success && contactResponse.data.contact) {
-            const contactData = contactResponse.data.contact;
-            setContact(contactData);
+          if (hydrationResponse.data?.success && hydrationResponse.data.data) {
+            const hydrationData = hydrationResponse.data.data;
+            const contactData = hydrationData.contact;
+            
+            setContact({
+              ...contactData,
+              contactCompany: hydrationData.company,
+            });
             
             // Store contact session using hook (foundation for everything else)
             setContactSession({
@@ -58,8 +63,14 @@ function WelcomeContent() {
               contactEmail: contactData.email || '',
               firebaseId: firebaseUser.uid,
               contactCompanyId: contactData.contactCompanyId || null,
-              companyName: contactData.contactCompany?.companyName || null,
+              companyName: hydrationData.company?.companyName || null,
               companyHQId: contactData.crmId || null,
+            });
+            
+            console.log('✅ Contact hydrated:', {
+              contactId: contactData.id,
+              companyName: hydrationData.company?.companyName,
+              proposalsCount: hydrationData.proposals?.length || 0,
             });
             
             setLoading(false);
