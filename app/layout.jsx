@@ -3,7 +3,13 @@ import './globals.css';
 export const metadata = {
   title: 'Ignite Client Portal',
   description: 'Your engagement hub for proposals and deliverables',
-  // Favicon handled via inline lucide-react Handshake icon in UI
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({ children }) {
