@@ -1,27 +1,31 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import { auth, onAuthStateChanged } from '@/lib/firebase';
-import { Handshake } from 'lucide-react';
 import Image from 'next/image';
 import api from '@/lib/api';
 import { useClientPortalSession } from '@/lib/hooks/useClientPortalSession';
 
+/**
+ * Welcome Router
+ * 
+ * This page acts as a smart router - it checks user state and routes accordingly.
+ * No UI needed - just fast routing based on:
+ * - Work has begun (approved proposals + deliverables) → Dashboard
+ * - Has draft proposals → Proposal view
+ * - No proposals → Onboarding
+ */
 function WelcomeContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { setContactSession } = useClientPortalSession();
-  const [loading, setLoading] = useState(true);
-  const [contact, setContact] = useState(null);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     // Use onAuthStateChanged to wait for Firebase auth to initialize
-    let hydrated = false;
+    let routed = false;
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      // Prevent multiple hydration calls
-      if (hydrated) return;
+      // Prevent multiple routing calls
+      if (routed) return;
       
       if (!firebaseUser) {
         // If no user after a brief delay, redirect to login
@@ -33,120 +37,85 @@ function WelcomeContent() {
         return;
       }
 
-      // Mark as hydrated to prevent duplicate calls
-      hydrated = true;
+      // Mark as routed to prevent duplicate calls
+      routed = true;
 
       /**
-       * Step 1: Contact Lookup/Retrieval (First Hydration)
-       * - User is authenticated via Firebase
-       * - Call client hydration endpoint
-       * - Store contact info for Step 2
+       * Welcome Router Logic:
+       * 1. Hydrate contact
+       * 2. Check state (proposals + deliverables)
+       * 3. Route based on state
        */
-      const hydrateContact = async () => {
+      const routeUser = async () => {
         try {
-          setLoading(true);
-          // Step 1: Call client hydration endpoint (hydrates contact only)
-          const hydrationResponse = await api.get(`/api/client/hydrate`);
+          // Step 1: Get client state (includes contact hydration + state check)
+          const stateResponse = await api.get(`/api/client/state`);
           
-          if (hydrationResponse.data?.success && hydrationResponse.data.data) {
-            const hydrationData = hydrationResponse.data.data;
-            const contactData = hydrationData.contact;
+          if (stateResponse.data?.success && stateResponse.data.state) {
+            const state = stateResponse.data.state;
+            const contact = state.contact;
             
-            setContact({
-              ...contactData,
-              contactCompany: hydrationData.company,
-            });
-            
-            // Store contact session using hook (foundation for everything else)
+            // Store contact session (foundation for everything else)
             setContactSession({
-              contactId: contactData.id,
-              contactEmail: contactData.email || '',
+              contactId: contact.id,
+              contactEmail: contact.email || '',
               firebaseId: firebaseUser.uid,
-              contactCompanyId: contactData.contactCompanyId || null,
-              companyName: hydrationData.company?.companyName || null,
-              companyHQId: contactData.crmId || null,
+              contactCompanyId: contact.contactCompanyId || null,
+              companyName: contact.companyName || null,
+              companyHQId: null, // Not needed for client portal
             });
             
-            console.log('✅ Contact hydrated:', {
-              contactId: contactData.id,
-              companyName: hydrationData.company?.companyName,
+            console.log('✅ Contact hydrated and state checked:', {
+              contactId: contact.id,
+              companyName: contact.companyName,
+              workHasBegun: state.workHasBegun,
+              route: state.routing.route,
             });
             
-            setLoading(false);
+            // Step 2: Route based on state
+            // Use replace to avoid adding to history
+            router.replace(state.routing.route);
           } else {
-            setError('Contact not found. Please ensure your account is activated.');
-            setLoading(false);
+            // Error - redirect to login
+            console.error('❌ Failed to get client state');
+            router.replace('/login');
           }
         } catch (error) {
-          console.error('❌ Step 1: Contact hydration error:', error);
-          setError(error.response?.data?.error || 'Failed to load contact information.');
-          setLoading(false);
+          console.error('❌ Welcome router error:', error);
+          // On error, try to at least hydrate contact and go to onboarding
+          try {
+            const hydrationResponse = await api.get(`/api/client/hydrate`);
+            if (hydrationResponse.data?.success && hydrationResponse.data.data) {
+              const contactData = hydrationResponse.data.data.contact;
+              setContactSession({
+                contactId: contactData.id,
+                contactEmail: contactData.email || '',
+                firebaseId: firebaseUser.uid,
+                contactCompanyId: contactData.contactCompanyId || null,
+                companyName: hydrationResponse.data.data.company?.companyName || null,
+                companyHQId: null,
+              });
+              router.replace('/onboarding');
+            } else {
+              router.replace('/login');
+            }
+          } catch (hydrationError) {
+            console.error('❌ Failed to hydrate contact:', hydrationError);
+            router.replace('/login');
+          }
         }
       };
 
-      hydrateContact();
+      routeUser();
     });
 
     return () => unsubscribe();
   }, [router, setContactSession]);
 
-  const handleContinue = () => {
-    router.push('/dashboard');
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800 flex items-center justify-center relative">
-        <div className="absolute top-6 right-6 flex items-center gap-2">
-          <Image
-            src="/logo.png"
-            alt="Ignite"
-            width={32}
-            height={32}
-            className="h-8 w-8 object-contain"
-            priority
-          />
-          <span className="text-sm font-semibold text-gray-300">Ignite</span>
-        </div>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-gray-400 mx-auto mb-4" />
-          <p className="text-gray-300 text-xl">Loading your portal...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800 flex items-center justify-center p-4 relative">
-        <div className="absolute top-6 right-6 flex items-center gap-2">
-          <Image
-            src="/logo.png"
-            alt="Ignite"
-            width={32}
-            height={32}
-            className="h-8 w-8 object-contain"
-            priority
-          />
-          <span className="text-sm font-semibold text-gray-300">Ignite</span>
-        </div>
-        <div className="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-8 max-w-md text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Error</h1>
-          <p className="text-gray-400 mb-6">{error}</p>
-          <button
-            onClick={() => router.push('/login')}
-            className="rounded-lg bg-gray-700 hover:bg-gray-600 border border-gray-500 px-6 py-2 text-white font-semibold transition"
-          >
-            Back to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
-
+  // Show minimal loading state while routing
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800 flex items-center justify-center p-4 relative">
-      <div className="absolute top-6 left-6 flex items-center gap-2">
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800 flex items-center justify-center relative">
+      <div className="absolute top-6 right-6 flex items-center gap-2">
         <Image
           src="/logo.png"
           alt="Ignite"
@@ -157,27 +126,9 @@ function WelcomeContent() {
         />
         <span className="text-sm font-semibold text-gray-300">Ignite</span>
       </div>
-      <div className="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-8 max-w-md text-center">
-        <div className="mb-6 flex justify-center">
-          <Handshake className="h-16 w-16 text-gray-300" strokeWidth={2} />
-        </div>
-        <h1 className="text-3xl font-bold text-white mb-2">
-          Welcome{contact?.firstName ? `, ${contact.firstName}` : ''}!
-        </h1>
-        {contact?.contactCompany?.companyName && (
-          <p className="text-gray-400 mb-2">
-            <span className="font-semibold text-gray-300">{contact.contactCompany.companyName}</span>
-          </p>
-        )}
-        <p className="text-gray-400 mb-8">
-          Your account is ready. View your proposals, track deliverables, and see your progress.
-        </p>
-        <button
-          onClick={handleContinue}
-          className="w-full rounded-lg bg-gray-700 hover:bg-gray-600 border border-gray-500 px-6 py-3 text-white font-semibold transition shadow-lg"
-        >
-          Take me to see progress →
-        </button>
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-gray-400 mx-auto mb-4" />
+        <p className="text-gray-300 text-xl">Loading your portal...</p>
       </div>
     </div>
   );
