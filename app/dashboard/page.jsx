@@ -9,81 +9,103 @@ import { useClientPortalSession } from '@/lib/hooks/useClientPortalSession';
 
 export default function ClientPortalDashboard() {
   const router = useRouter();
-  const { proposalId, setProposalId, contactSession, hasValidSession } = useClientPortalSession();
+  const { proposalId, setProposalId, contactSession, hasValidSession, refreshSession } = useClientPortalSession();
   const [loading, setLoading] = useState(true);
   const [portalData, setPortalData] = useState(null);
   const [contactRole, setContactRole] = useState(null);
   const [promoting, setPromoting] = useState(false);
 
   useEffect(() => {
-    const firebaseUser = auth.currentUser;
-    if (!firebaseUser) {
-      router.replace('/login');
-      return;
-    }
+    // Use onAuthStateChanged to wait for Firebase auth to initialize
+    const { onAuthStateChanged } = require('firebase/auth');
+    
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        router.replace('/login');
+        return;
+      }
 
-    /**
-     * Step 2: Company/Proposals Hydration (Second Hydration)
-     * - Contact is already loaded (from Step 1: Welcome)
-     * - Load company info and proposals using contactCompanyId
-     * - This is the full dashboard hydration
-     */
-    const hydrateCompanyAndProposals = async () => {
-      try {
-        // Check if we have a valid session
-        if (!hasValidSession || !contactSession?.contactId) {
-          // No contact from Step 1 - redirect to welcome
-          router.replace('/welcome');
-          return;
-        }
-
-        const contactId = contactSession.contactId;
-        const contactCompanyId = contactSession.contactCompanyId;
-
-        // Step 2a: Get contact role (for elevation flow)
+      /**
+       * Step 2: Company/Proposals Hydration (Second Hydration)
+       * - Contact is already loaded (from Step 1: Welcome)
+       * - Load company info and proposals using contactCompanyId
+       * - This is the full dashboard hydration
+       */
+      const hydrateCompanyAndProposals = async () => {
         try {
-          const contactResponse = await api.get(`/api/contacts/by-firebase-uid`);
-          if (contactResponse.data?.success && contactResponse.data.contact) {
-            setContactRole(contactResponse.data.contact.role || 'contact');
+          // Give session a moment to be available (might have just been set in welcome)
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          // Refresh session from localStorage to get latest data
+          refreshSession();
+          
+          // Wait a bit more for state to update
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Check session directly from localStorage as fallback
+          const storedContactId = typeof window !== 'undefined' 
+            ? localStorage.getItem('clientPortalContactId')
+            : null;
+          
+          if (!storedContactId && !contactSession?.contactId) {
+            // No contact from Step 1 - redirect to welcome to hydrate
+            console.log('⚠️ No contact session found, redirecting to welcome');
+            router.replace('/welcome');
+            return;
           }
-        } catch (err) {
-          console.warn('Could not fetch contact role:', err);
-        }
 
-        // Step 2b: Load proposals using contactCompanyId
-        if (contactCompanyId) {
+          // Use stored contactId if hook hasn't updated yet
+          const contactId = contactSession?.contactId || storedContactId;
+          const contactCompanyId = contactSession?.contactCompanyId || 
+            (typeof window !== 'undefined' ? localStorage.getItem('clientPortalContactCompanyId') : null);
+
+          // Step 2a: Get contact role (for elevation flow)
           try {
-            // Find proposals for this contact's company
-            const proposalsResponse = await api.get(`/api/contacts/${contactId}/proposals`);
-            
-            if (proposalsResponse.data?.success && proposalsResponse.data.proposals?.length > 0) {
-              // Get first proposal or use stored one (foundation for everything else)
-              let currentProposalId = proposalId;
-              if (!currentProposalId) {
-                currentProposalId = proposalsResponse.data.proposals[0].id;
-                setProposalId(currentProposalId); // Store using hook
-              }
-
-              // Load full portal data for this proposal
-              const portalResponse = await api.get(`/api/proposals/${currentProposalId}/portal`);
-              if (portalResponse.data?.success) {
-                setPortalData(portalResponse.data.portalData);
-              }
+            const contactResponse = await api.get(`/api/contacts/by-firebase-uid`);
+            if (contactResponse.data?.success && contactResponse.data.contact) {
+              setContactRole(contactResponse.data.contact.role || 'contact');
             }
           } catch (err) {
-            console.error('Error loading proposals:', err);
-            // Continue - show empty state
+            console.warn('Could not fetch contact role:', err);
           }
-        }
-      } catch (error) {
-        console.error('❌ Step 2: Company/Proposals hydration error:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    hydrateCompanyAndProposals();
-  }, [router]);
+          // Step 2b: Load proposals using contactCompanyId
+          if (contactCompanyId) {
+            try {
+              // Find proposals for this contact's company
+              const proposalsResponse = await api.get(`/api/contacts/${contactId}/proposals`);
+              
+              if (proposalsResponse.data?.success && proposalsResponse.data.proposals?.length > 0) {
+                // Get first proposal or use stored one (foundation for everything else)
+                let currentProposalId = proposalId;
+                if (!currentProposalId) {
+                  currentProposalId = proposalsResponse.data.proposals[0].id;
+                  setProposalId(currentProposalId); // Store using hook
+                }
+
+                // Load full portal data for this proposal
+                const portalResponse = await api.get(`/api/proposals/${currentProposalId}/portal`);
+                if (portalResponse.data?.success) {
+                  setPortalData(portalResponse.data.portalData);
+                }
+              }
+            } catch (err) {
+              console.error('Error loading proposals:', err);
+              // Continue - show empty state
+            }
+          }
+        } catch (error) {
+          console.error('❌ Step 2: Company/Proposals hydration error:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      hydrateCompanyAndProposals();
+    });
+
+    return () => unsubscribe();
+  }, [router, contactSession, hasValidSession, proposalId, setProposalId, refreshSession]);
 
   const handlePromoteToOwner = async () => {
     if (!window.confirm('Are you ready to get your own IgniteBD stack? This will create your own workspace where you can manage your business development.')) {
