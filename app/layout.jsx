@@ -3,13 +3,7 @@ import './globals.css';
 export const metadata = {
   title: 'Ignite Client Portal',
   description: 'Your engagement hub for proposals and deliverables',
-  icons: {
-    icon: [
-      { url: '/favicon.svg', type: 'image/svg+xml' },
-    ],
-    shortcut: '/favicon.svg',
-    apple: '/favicon.svg',
-  },
+  // No icons metadata - browser default is fine (per FAVICON.md)
 };
 
 export default function RootLayout({ children }) {
