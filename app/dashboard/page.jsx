@@ -1,19 +1,24 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import Image from 'next/image';
 import api from '@/lib/api';
 import { useClientPortalSession } from '@/lib/hooks/useClientPortalSession';
+import InvoicePaymentModal from '@/app/components/InvoicePaymentModal';
 
 export default function ClientPortalDashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { proposalId, setProposalId, contactSession, hasValidSession, refreshSession } = useClientPortalSession();
   const [loading, setLoading] = useState(true);
   const [portalData, setPortalData] = useState(null);
   const [contactRole, setContactRole] = useState(null);
   const [promoting, setPromoting] = useState(false);
+  const [invoices, setInvoices] = useState([]);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   useEffect(() => {
     // Use onAuthStateChanged to wait for Firebase auth to initialize
@@ -88,6 +93,16 @@ export default function ClientPortalDashboard() {
                 if (portalResponse.data?.success) {
                   setPortalData(portalResponse.data.portalData);
                 }
+
+                // Load invoices
+                try {
+                  const invoicesResponse = await api.get('/api/invoices');
+                  if (invoicesResponse.data?.success) {
+                    setInvoices(invoicesResponse.data.invoices || []);
+                  }
+                } catch (err) {
+                  console.error('Error loading invoices:', err);
+                }
               }
             } catch (err) {
               console.error('Error loading proposals:', err);
@@ -106,6 +121,26 @@ export default function ClientPortalDashboard() {
 
     return () => unsubscribe();
   }, [router, contactSession, hasValidSession, proposalId, setProposalId, refreshSession]);
+
+  // Handle payment success redirect
+  useEffect(() => {
+    const sessionId = searchParams?.get('session_id');
+    const invoiceId = searchParams?.get('invoice_id');
+    
+    if (sessionId && invoiceId) {
+      // Payment completed - refresh invoices
+      api.get('/api/invoices')
+        .then((response) => {
+          if (response.data?.success) {
+            setInvoices(response.data.invoices || []);
+          }
+        })
+        .catch((err) => console.error('Error refreshing invoices:', err));
+      
+      // Clean up URL
+      router.replace('/dashboard');
+    }
+  }, [searchParams, router]);
 
   const handlePromoteToOwner = async () => {
     if (!window.confirm('Are you ready to get your own IgniteBD stack? This will create your own workspace where you can manage your business development.')) {
@@ -128,6 +163,33 @@ export default function ClientPortalDashboard() {
     } finally {
       setPromoting(false);
     }
+  };
+
+  const handlePayInvoice = (invoice) => {
+    setSelectedInvoice(invoice);
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    setShowPaymentModal(false);
+    setSelectedInvoice(null);
+    // Refresh invoices
+    api.get('/api/invoices')
+      .then((response) => {
+        if (response.data?.success) {
+          setInvoices(response.data.invoices || []);
+        }
+      })
+      .catch((err) => console.error('Error refreshing invoices:', err));
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
   };
 
   if (loading) {
@@ -244,6 +306,76 @@ export default function ClientPortalDashboard() {
               </div>
             )}
 
+            {/* Invoices Section */}
+            <div className="bg-gray-900 border border-gray-700 rounded-lg mb-8">
+              <div className="p-6 border-b border-gray-700">
+                <h3 className="text-lg font-semibold text-white">Pay Invoice</h3>
+                <p className="text-sm text-gray-400">View and pay your invoices</p>
+              </div>
+              <div className="p-6">
+                {invoices.length === 0 ? (
+                  <p className="text-gray-400 text-center py-8">No invoices yet</p>
+                ) : (
+                  <div className="space-y-4">
+                    {invoices.map((invoice) => (
+                      <div
+                        key={invoice.id}
+                        className="flex items-center justify-between p-4 border border-gray-700 rounded-lg bg-gray-800"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-4 mb-2">
+                            <h4 className="font-semibold text-white">
+                              Invoice {invoice.invoiceNumber}
+                            </h4>
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                invoice.status === 'paid'
+                                  ? 'bg-green-900 text-green-300'
+                                  : invoice.status === 'failed'
+                                    ? 'bg-red-900 text-red-300'
+                                    : 'bg-yellow-900 text-yellow-300'
+                              }`}
+                            >
+                              {invoice.status.toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-6 text-sm text-gray-400">
+                            <span>
+                              Amount: <span className="text-white font-semibold">
+                                ${invoice.amount.toFixed(2)} {invoice.currency}
+                              </span>
+                            </span>
+                            {invoice.dueDate && (
+                              <span>Due: {formatDate(invoice.dueDate)}</span>
+                            )}
+                            {invoice.trigger && (
+                              <span>Trigger: {invoice.trigger}</span>
+                            )}
+                          </div>
+                          {invoice.description && (
+                            <p className="text-sm text-gray-400 mt-2">{invoice.description}</p>
+                          )}
+                        </div>
+                        {invoice.status === 'pending' && (
+                          <button
+                            onClick={() => handlePayInvoice(invoice)}
+                            className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition ml-4"
+                          >
+                            Pay Now
+                          </button>
+                        )}
+                        {invoice.status === 'paid' && invoice.paidAt && (
+                          <div className="text-sm text-gray-400 ml-4">
+                            Paid {formatDate(invoice.paidAt)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Deliverables List */}
             <div className="bg-gray-900 border border-gray-700 rounded-lg">
               <div className="p-6 border-b border-gray-700">
@@ -286,6 +418,18 @@ export default function ClientPortalDashboard() {
           </>
         )}
       </main>
+
+      {/* Payment Modal */}
+      {showPaymentModal && selectedInvoice && (
+        <InvoicePaymentModal
+          invoice={selectedInvoice}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setSelectedInvoice(null);
+          }}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }

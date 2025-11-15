@@ -211,6 +211,7 @@ model Proposal {
   createdAt    DateTime                @default(now())
   updatedAt    DateTime                @updatedAt
   deliverables ConsultantDeliverable[]
+  invoices     Invoice[]
 
   @@map("proposals")
 }
@@ -266,4 +267,40 @@ model ConsultantDeliverable {
   @@index([contactId])
   @@index([proposalId])
   @@map("consultant_deliverables")
+}
+
+model Invoice {
+  id          String   @id @default(cuid())
+  proposalId  String
+  proposal    Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  
+  // Invoice details
+  invoiceNumber String   @unique // Human-readable invoice number (e.g., "INV-2025-001")
+  amount        Float    // Amount in dollars (e.g., 500.00)
+  currency      String   @default("USD")
+  description   String?  // Invoice description/notes
+  
+  // Payment schedule reference
+  paymentScheduleId String? // Reference to payment in Proposal.compensation.paymentSchedule (e.g., "payment-1")
+  week              Int?     // Week number from payment schedule
+  trigger           String?  // Payment trigger (e.g., "Kickoff", "Week 4", "Completion")
+  
+  // Payment status
+  status String @default("pending") // "pending" | "paid" | "failed" | "refunded"
+  
+  // Stripe integration
+  stripeCheckoutSessionId String? @unique // Stripe checkout session ID
+  stripePaymentIntentId   String? @unique // Stripe payment intent ID
+  stripeCustomerId        String? // Stripe customer ID
+  
+  // Dates
+  dueDate    DateTime? // When payment is due
+  paidAt     DateTime? // When payment was completed
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  
+  @@index([proposalId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("invoices")
 }
