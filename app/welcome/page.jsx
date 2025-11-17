@@ -1,27 +1,26 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth, onAuthStateChanged } from '@/lib/firebase';
-import Image from 'next/image';
 import api from '@/lib/api';
 
 /**
- * Welcome = Loader Only (MVP1)
+ * Welcome = Simple Loader (MVP1)
  * 
- * No routing logic. No UI decisions. No fetching proposals or work.
- * Just:
- * 1. Get Firebase UID
- * 2. Fetch contact by UID
- * 3. Store in localStorage: contactId, contactCompanyId, contactEmail, firebaseUid
- * 4. Redirect to /dashboard
+ * Shows client name and "See your project"
+ * Redirects to dashboard after 1.5 seconds
  */
 function WelcomeContent() {
   const router = useRouter();
+  const [clientName, setClientName] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     // Use onAuthStateChanged to wait for Firebase auth to initialize
     let routed = false;
+    
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       // Prevent multiple routing calls
       if (routed) return;
@@ -40,9 +39,9 @@ function WelcomeContent() {
       routed = true;
 
       /**
-       * MVP1: Simple loader - just hydrate contact and redirect
+       * MVP1: Simple loader - hydrate contact
        */
-      const hydrateAndRedirect = async () => {
+      const hydrateContact = async () => {
         try {
           // Fetch contact by Firebase UID
           const hydrationResponse = await api.get(`/api/client/hydrate`);
@@ -50,6 +49,13 @@ function WelcomeContent() {
           if (hydrationResponse.data?.success && hydrationResponse.data.data) {
             const contact = hydrationResponse.data.data.contact;
             const firebaseUid = firebaseUser.uid;
+            
+            // Get client name (company name or contact name)
+            const name = contact.contactCompany?.companyName || 
+                        contact.firstName || 
+                        contact.email?.split('@')[0] || 
+                        'there';
+            setClientName(name);
             
             // Store in localStorage (MVP1 - simple storage)
             if (typeof window !== 'undefined') {
@@ -59,13 +65,8 @@ function WelcomeContent() {
               localStorage.setItem('firebaseId', firebaseUid);
             }
             
-            console.log('✅ Contact hydrated (MVP1):', {
-              contactId: contact.id,
-              contactCompanyId: contact.contactCompanyId,
-            });
-            
-            // Redirect to dashboard
-            router.replace('/dashboard');
+            setLoading(false);
+            setReady(true);
           } else {
             console.error('❌ Failed to hydrate contact');
             router.replace('/login');
@@ -76,29 +77,60 @@ function WelcomeContent() {
         }
       };
 
-      hydrateAndRedirect();
+      hydrateContact();
     });
 
     return () => unsubscribe();
   }, [router]);
 
-  // Show minimal loading state while routing
+  const handleContinue = () => {
+    router.replace('/dashboard');
+  };
+
+  // Show welcome message
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800 flex items-center justify-center relative">
-      <div className="absolute top-6 right-6 flex items-center gap-2">
-        <Image
-          src="/logo.png"
-          alt="Ignite"
-          width={32}
-          height={32}
-          className="h-8 w-8 object-contain"
-          priority
-        />
-        <span className="text-sm font-semibold text-gray-300">Ignite</span>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800 flex items-center justify-center px-4">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-gray-400 mx-auto mb-4" />
-        <p className="text-gray-300 text-xl">Loading your portal...</p>
+        {loading ? (
+          <>
+            <div className="mb-6">
+              <div className="inline-block p-4 bg-white/20 rounded-full animate-pulse">
+                <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            <div className="flex justify-center">
+              <div className="w-64 h-1 bg-white/30 rounded-full overflow-hidden">
+                <div className="h-full bg-white rounded-full animate-[loading_1.5s_ease-in-out]"></div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="mb-6">
+              <div className="inline-block p-4 bg-white/20 rounded-full">
+                <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            
+            <h1 className="text-4xl font-bold text-white mb-2">
+              Welcome{clientName ? `, ${clientName}` : ''}!
+            </h1>
+            <p className="text-xl text-white/80 mb-8">See your project...</p>
+            
+            {ready && (
+              <button
+                onClick={handleContinue}
+                className="px-8 py-3 bg-white text-gray-900 font-semibold rounded-lg hover:bg-gray-100 transition shadow-lg"
+              >
+                Continue
+              </button>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
