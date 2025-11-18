@@ -1,6 +1,3 @@
-import { redirect } from 'next/navigation';
-
-export default function Home() {
-  redirect('/splash');
-}
+// Main page is now splash - no redirect needed
+export { default } from './splash/page';
 

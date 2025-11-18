@@ -25,9 +25,8 @@ export async function GET(request, { params }) {
       );
     }
 
-    // Resolve params (Next.js 15 async params support)
-    const resolvedParams = params && typeof params.then === 'function' ? await params : params;
-    const artifactId = resolvedParams?.artifactId;
+    // Get artifactId from params
+    const { artifactId } = await params;
 
     if (!artifactId) {
       return NextResponse.json(
