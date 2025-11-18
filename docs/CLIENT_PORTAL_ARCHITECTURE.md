@@ -83,7 +83,7 @@ Both IgniteBD and the Client Portal use the same Prisma schema and PostgreSQL da
   - `workPackagePhase` - WorkPackagePhase
   - `artifacts` - WorkArtifact[] (actual work content)
 
-**WorkArtifact** (`workArtifactId`)
+**WorkArtifact** (`workArtifactId`) - **⚠️ FUTURE FEATURE: Not yet implemented**
 - `id` - Artifact ID (primary key)
 - `workPackageItemId` - Link to WorkPackageItem
 - `type` - "BLOG" | "PERSONA" | "CLE_DECK" | "TEMPLATE" | "LANDING_PAGE" | etc.
@@ -92,6 +92,8 @@ Both IgniteBD and the Client Portal use the same Prisma schema and PostgreSQL da
 - `status` - "DRAFT" | "IN_REVIEW" | "APPROVED" | "COMPLETED"
 - `reviewRequestedAt` - When review was requested
 - `reviewCompletedAt` - When review was completed
+
+**Note:** The `WorkArtifact` model exists in the Prisma schema, but the database table (`work_artifacts`) has not been created. Artifacts are not currently queried in API routes. This is a future feature.
 - Relations:
   - `workPackageItem` - WorkPackageItem
 
@@ -302,11 +304,13 @@ const workPackage = await prisma.workPackage.findUnique({
 
 ---
 
-### 3. Work Artifact View
+### 3. Work Artifact View (⚠️ FUTURE FEATURE)
 
 **Endpoint:** `GET /api/client/work/[artifactId]`
 
 **Purpose:** Get single work artifact for viewing
+
+**Note:** This endpoint exists but is not functional yet. The `work_artifacts` table does not exist in the database.
 
 **Query:**
 ```javascript
@@ -449,8 +453,8 @@ Company (contactCompanyId)
 | Route | Method | Purpose | Returns |
 |-------|--------|---------|---------|
 | `/api/client` | GET | Contact hydration | `contactId`, `contactCompanyId` |
-| `/api/client/work` | GET | WorkPackage hydration | Full WorkPackage with phases, items, artifacts |
-| `/api/client/work/[artifactId]` | GET | Single artifact view | WorkArtifact with content |
+| `/api/client/work` | GET | WorkPackage hydration | Full WorkPackage with phases, items (artifacts not yet included) |
+| `/api/client/work/[artifactId]` | GET | Single artifact view (⚠️ FUTURE) | WorkArtifact with content (not yet implemented) |
 | `/api/client/billing` | GET | Invoice list | Array of invoices |
 | `/api/client/billing/[invoiceId]/checkout` | POST | Create Stripe checkout | `clientSecret` for embedded checkout |
 | `/api/client/billing/[invoiceId]/verify/[sessionId]` | GET | Verify payment (fallback) | Payment status + `contactId` who paid |

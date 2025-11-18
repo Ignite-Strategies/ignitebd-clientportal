@@ -73,10 +73,12 @@
 - **Company** - Client's company (via `contactCompanyId`)
 - **WorkPackage** - Container for work items (linked to company)
 - **WorkPackageItem** - Individual deliverables
-- **WorkArtifact** - Actual work content (blogs, personas, decks, templates)
+- **WorkArtifact** - Actual work content (blogs, personas, decks, templates) - **⚠️ FUTURE FEATURE: Not yet implemented**
 - **Invoice** - Payment invoices
 
 **Note:** Detailed model architecture is in `WORK_ARTIFACT_ARCHITECTURE.md`. Models are evolving - this guide focuses on what we're building, not deprecated structures.
+
+**⚠️ WorkArtifacts:** The `WorkArtifact` model exists in the Prisma schema but the database table has not been created yet. Artifacts are not currently being queried or displayed. This is a future feature.
 
 ---
 
@@ -135,13 +137,14 @@ Contact → /login
   → Store workPackageId in localStorage
 ```
 
-### 5. Work Artifact View
+### 5. Work Artifact View (⚠️ FUTURE FEATURE)
 ```
 /work/[artifactId] loads
   → GET /api/client/work/[artifactId]
   → Verify artifact belongs to contact's WorkPackage
   → Display artifact (title, type, status, contentJson)
 ```
+**Note:** WorkArtifacts are not yet implemented. The routes exist but the database table has not been created.
 
 ### 6. Billing
 ```
@@ -450,13 +453,15 @@ Firebase Auth (signInWithEmailAndPassword)
 
 ---
 
-## Work Artifact Architecture
+## Work Artifact Architecture (⚠️ FUTURE FEATURE)
 
-**How artifacts are displayed in the client portal:**
+**How artifacts will be displayed in the client portal (when implemented):**
 
-WorkArtifacts are linked directly to WorkPackageItems. The `hydrateWorkPackage` service loads artifacts from the WorkArtifact model.
+WorkArtifacts are linked directly to WorkPackageItems. The `hydrateWorkPackage` service will load artifacts from the WorkArtifact model.
 
-**See:** `WORK_ARTIFACT_ARCHITECTURE.md` for detailed architecture
+**Current Status:** The `WorkArtifact` model exists in the Prisma schema, but the database table (`work_artifacts`) has not been created. Artifacts are not currently queried or displayed. This is planned for a future release.
+
+**See:** `WORK_ARTIFACT_ARCHITECTURE.md` for detailed architecture (future implementation)
 
 ---
 

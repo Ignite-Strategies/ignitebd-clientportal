@@ -68,7 +68,7 @@ export async function GET(request) {
     let workPackage;
 
     if (finalWorkPackageId) {
-      // Use exact query as specified
+      // Use exact query as specified (artifacts removed until table exists)
       workPackage = await prisma.workPackage.findUnique({
         where: { id: finalWorkPackageId },
         include: {
@@ -80,11 +80,7 @@ export async function GET(request) {
           },
           phases: {
             include: {
-              items: {
-                include: {
-                  artifacts: true
-                }
-              }
+              items: true
             },
             orderBy: { position: "asc" }
           }
@@ -111,11 +107,7 @@ export async function GET(request) {
           },
           phases: {
             include: {
-              items: {
-                include: {
-                  artifacts: true
-                }
-              }
+              items: true
             },
             orderBy: { position: "asc" }
           }
