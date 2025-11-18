@@ -1,15 +1,17 @@
 # Client Portal Dev Guide
 
-## What This Is
+**Authoritative guide** - Single source of truth for client portal development.
 
-**Client-facing portal** - A separate Next.js app where clients view their engagement, deliverables, and work. This is what **clients see**, not what owners manage.
+---
 
-**Key Principle:** Contact-First (Universal Personhood)
-- Contact exists in IgniteBD (funnel, outreach, etc.)
-- Same Contact can access Client Portal
-- **No new user record needed** - Contact IS the user
-- Contact's email = Firebase login username
-- Contact's `firebaseUid` = Portal identity
+## Purpose
+
+**Single place for clients to:**
+- Get proposals
+- See status of projects
+- Pay Ignite (or downstream other clients they onboard if we can figure out how to make this multitenant)
+
+**As such:** Things built on IgniteBD will populate here.
 
 ---
 
@@ -21,28 +23,75 @@
 - **Shared Database**: Uses same Prisma schema and PostgreSQL database as IgniteBD
 - **Direct DB Access**: Reads/writes directly via Prisma (no dependency on IgniteBD API)
 - **Independent Deployment**: Own domain (`clientportal.ignitegrowth.biz`)
+- **Self-Contained**: All API routes are local (`/api/*`) - no external API calls needed
 
-### Data Sources (What Clients See)
+### Contact-First (Universal Personhood)
 
-The portal hydrates from **two main sources**:
+- Contact exists in IgniteBD (funnel, outreach, etc.)
+- Same Contact can access Client Portal
+- **No new user record needed** - Contact IS the user
+- Contact's email = Firebase login username
+- Contact's `firebaseUid` = Portal identity
 
-1. **Proposals** - Engagement plans (phases, milestones, payments)
-   - Endpoint: `GET /api/proposals/:proposalId/portal`
-   - Shows: Proposal structure, deliverables, payment schedule
-
-2. **WorkPackages** - Actual work artifacts (blogs, personas, templates, etc.)
-   - Endpoint: `GET /api/workpackages/client/:contactId`
-   - Shows: Published work artifacts organized by package
-
-3. **ConsultantDeliverables** - What we're providing (linked to proposals)
-   - Part of proposal portal data
-   - Shows: Deliverable status, due dates, completion
+**How it works:**
+1. IgniteBD creates contact and sets up Firebase user → `firebaseUid` stored in `Contact.firebaseUid`
+2. Client portal uses Firebase Auth (client-side) to authenticate user
+3. Client portal API routes verify Firebase token (server-side) and look up contact by `firebaseUid`
 
 ---
 
-## User Flow (What Clients Experience)
+## Routes
 
-### 1. Login
+**Frontend Routes:**
+- `/` (root) - Splash page
+- `/splash` - Auth check
+- `/login` - Contact login
+- `/welcome` - Contact hydration
+- `/dashboard` - Main dashboard (WorkPackage, invoices)
+- `/work/[artifactId]` - Work artifact view
+- `/settings/billing` - Invoice list and payment
+- `/settings` - Settings
+- `/activate` - Account activation
+- `/set-password` - Set password
+- `/reset-password` - Password reset
+
+**API Routes:**
+- `/api/client` - Contact hydration
+- `/api/client/work` - WorkPackage hydration
+- `/api/client/work/[artifactId]` - Single artifact
+- `/api/client/billing` - Invoice list
+- `/api/client/billing/[invoiceId]/checkout` - Stripe checkout
+
+**See:** `CLIENT_PORTAL_ARCHITECTURE.md` for detailed route specifications, database queries, and response formats.
+
+---
+
+## Data Models (High Level)
+
+**What we're hydrating:**
+- **Contact** - The user (identified by `firebaseUid`)
+- **Company** - Client's company (via `contactCompanyId`)
+- **WorkPackage** - Container for work items (linked to company)
+- **WorkPackageItem** - Individual deliverables
+- **WorkArtifact** - Actual work content (blogs, personas, decks, templates)
+- **Invoice** - Payment invoices
+
+**Note:** Detailed model architecture is in `WORK_ARTIFACT_ARCHITECTURE.md`. Models are evolving - this guide focuses on what we're building, not deprecated structures.
+
+---
+
+## User Flow (MVP1 - Current)
+
+### 1. Landing (Splash)
+```
+User → / (root)
+  → Splash page displays
+  → Check Firebase auth state
+  → If authenticated → /welcome
+  → If not authenticated → /login
+```
+
+### 2. Login
 ```
 Contact → /login
   → Enters email + password
@@ -52,412 +101,111 @@ Contact → /login
   → Redirects to /welcome
 ```
 
-### 2. Welcome Router (Strategic Routing)
+### 3. Welcome (Contact Hydration)
 ```
 /welcome loads
-  → GET /api/client/state
-  → Checks:
-     - Deliverables with workContent? → /dashboard (work started)
-     - Proposals exist? → /proposals/[proposalId] (proposal ready)
-     - Otherwise → /dashboard (empty state)
-  → Routes accordingly
+  → Check Firebase auth
+  → GET /api/client
+     - Looks up Contact by firebaseUid
+     - Gets contactCompanyId
+  → Store in localStorage:
+     - contactId
+     - contactCompanyId
+     - contactEmail
+     - firebaseUid
+  → Display welcome message with client name
+  → User clicks "Continue" button
+  → Redirect to /dashboard
 ```
 
-**Routing Logic:**
-- **First Visit (Proposal Ready)**: Owner sends contact when proposal is ready → Route to proposal view
-- **Second Visit (Work Started)**: Owner sends contact when work has started → Route to dashboard with deliverables
-
-### 3. Dashboard
+### 4. Dashboard (Company + WorkPackage Hydration)
 ```
 /dashboard loads
-  → Gets contactId from localStorage
-  → Gets proposalId from localStorage or finds via API
-  → GET /api/proposals/:proposalId/portal
-  → Displays:
-     - Welcome message
-     - Stats (total/completed deliverables)
-     - Deliverables list
-     - Invoices (if any)
+  → Get contactCompanyId from localStorage
+  → GET /api/client/work
+     - Gets Company object by contactCompanyId
+     - Company includes workPackages array
+     - Uses workPackageId from company.workPackages[0] (most recent)
+     - Loads WorkPackage with items and artifacts
+  → Display:
+     - WorkPackage title and description
+     - Deliverables list (WorkPackageItems)
+     - Artifacts (with "View" links to /work/[artifactId])
+     - Invoice notification (if pending)
+  → Store workPackageId in localStorage
 ```
 
-### 4. Proposal View
+### 5. Work Artifact View
 ```
-/proposals/[proposalId] loads
-  → GET /api/proposals/:proposalId/portal
-  → Displays:
-     - Proposal purpose
-     - Phases and milestones
-     - Payment schedule
-     - Scope of work
+/work/[artifactId] loads
+  → GET /api/client/work/[artifactId]
+  → Verify artifact belongs to contact's WorkPackage
+  → Display artifact (title, type, status, contentJson)
+```
+
+### 6. Billing
+```
+/settings/billing loads
+  → GET /api/client/billing
+  → Display invoice list
+  → "Pay Now" button (Stripe checkout)
 ```
 
 ---
 
-## Portal Routes
+## Data Hydration
 
-### Core Routes (Implemented)
+**Welcome:** Contact hydration via `/api/client` - Gets `contactId` and `contactCompanyId`
 
-- **`/splash`** - Auth check (redirects to welcome/login)
-- **`/login`** - Contact login (email + password via Firebase)
-- **`/welcome`** - **Strategic router** (routes to proposal view or dashboard)
-- **`/dashboard`** - Main dashboard (deliverables, stats, invoices)
-- **`/proposals/[proposalId]`** - Proposal detail view (when proposal ready)
-- **`/settings`** - Settings (password change, billing)
+**Dashboard:** Company + WorkPackage hydration via `/api/client/work` - Gets Company with workPackages, then loads WorkPackage with artifacts
 
-### Missing Routes (Nav buttons exist but not implemented)
-
-- **`/foundational-work`** - Detailed deliverables view
-- **`/proposals`** - Proposal list page
-- **`/timeline`** - Timeline visualization
+**See:** `CLIENT_PORTAL_ARCHITECTURE.md` for detailed database queries, response formats, and ID hierarchy.
 
 ---
 
-## Hydration Endpoints
+## Key Services
 
-### 1. Client State (Strategic Routing)
+**WorkPackageHydrationService** - Hydrates WorkPackage with artifacts from WorkArtifact model
 
-**GET /api/client/state**
-
-Determines where to route the user based on their state.
-
-**Returns:**
-```javascript
-{
-  success: true,
-  state: {
-    contact: {
-      id: "contact-123",
-      email: "client@example.com",
-      contactCompanyId: "company-456",
-      companyName: "Acme Corp"
-    },
-    proposals: [...],
-    deliverables: [...],
-    workHasStarted: true,  // Has deliverables with workContent or active status
-    routing: {
-      route: "/dashboard",  // or "/proposals/[id]"
-      routeReason: "work_started",  // or "proposal_ready"
-      proposalId: "proposal-789"
-    }
-  }
-}
-```
-
-**Used by:** `/welcome` page to determine routing
+**See:** `CLIENT_PORTAL_ARCHITECTURE.md` for detailed service usage and database queries.
 
 ---
 
-### 2. Proposal Portal Data
+## MVP1 Architecture Summary
 
-**GET /api/proposals/:proposalId/portal**
+### Current State (MVP1)
 
-Gets all portal data for a proposal - this is the main hydration endpoint.
+**Splash** = Main landing page (not redirect)
+- Shows handshake icon
+- Checks auth, redirects to welcome/login
 
-**Returns:**
-```javascript
-{
-  success: true,
-  portalData: {
-    // Client info
-    client: {
-      name: "Joel Gulick",
-      company: "BusinessPoint Law",
-      contactEmail: "joel@businesspointlaw.com",
-      contactId: "contact-123"
-    },
-    
-    // Contract info
-    contract: {
-      contractId: "contract-xxx",
-      status: "active"
-    },
-    
-    // Deliverables (what we're providing)
-    deliverables: [
-      {
-        id: "del-1",
-        title: "3 Target Personas",
-        status: "completed",
-        category: "foundation",
-        dueDate: "2025-11-15",
-        completedAt: "2025-11-10",
-        hasWorkContent: true  // Indicates work has started
-      },
-      // ... more deliverables
-    ],
-    
-    // Proposal structure
-    proposal: {
-      id: "proposal-xxx",
-      purpose: "...",
-      phases: [/* phase data */],
-      milestones: [/* milestone data */],
-      status: "active"
-    },
-    
-    // Payment info
-    payments: [
-      {
-        id: "payment-1",
-        amount: 500,
-        dueDate: "2025-11-15",
-        status: "pending",
-        description: "Kickoff payment"
-      },
-      // ... more payments
-    ],
-    
-    // Overall status
-    status: {
-      overall: "in-progress",
-      completedDeliverables: 3,
-      totalDeliverables: 8
-    }
-  }
-}
-```
+**Welcome** = Simple loader
+- Hydrates contact
+- Stores in localStorage
+- Shows "Welcome, [Name]! See your project..."
+- User clicks "Continue" → dashboard
 
-**Used by:** `/dashboard` and `/proposals/[proposalId]` pages
+**Dashboard** = Universal hydration
+- Calls `/api/workpackage`
+- Gets Company by `contactCompanyId`
+- Hydrates WorkPackage with artifacts
+- Shows WorkPackage title, items, artifacts
+- Shows invoice notification if pending
+- Links to `/work/[artifactId]` for viewing
 
----
+**No routing logic** - Just hydrate and display
 
-### 3. Work Packages (Client View)
+### What's NOT in MVP1
 
-**GET /api/workpackages/client/:contactId**
-
-Gets work packages for a contact - shows published artifacts only.
-
-**Returns:**
-```javascript
-{
-  success: true,
-  workPackages: [
-    {
-      id: "wp-123",
-      title: "Q1 Content Package",
-      description: "...",
-      status: "ACTIVE",
-      contact: { ... },
-      contactCompany: { ... },
-      items: [
-        {
-          id: "item-1",
-          deliverableName: "Blog Posts",
-          type: "BLOG",
-          quantity: 5,
-          blogIds: ["blog-1", "blog-2"],  // Published artifacts
-          progress: 0.4  // 2/5 completed
-        },
-        // ... more items
-      ]
-    },
-    // ... more work packages
-  ]
-}
-```
-
-**Note:** This endpoint exists in the main app (`IgniteBd-Next-combine`), not the client portal. The client portal would need to call it or have its own version.
-
-**Used by:** (Not yet implemented in portal - potential for "Foundational Work" page)
-
----
-
-## Session Management
-
-### useClientPortalSession Hook
-
-The `useClientPortalSession` hook manages all session state.
-
-**Storage Keys (localStorage):**
-- `clientPortalContactId` - Contact ID
-- `clientPortalContactEmail` - Contact email
-- `clientPortalContactCompanyId` - Contact's company ID
-- `clientPortalCompanyName` - Company name
-- `clientPortalProposalId` - **Foundation for everything else** - Current proposal ID
-- `firebaseId` - Firebase UID
-
-**Usage:**
-```javascript
-import { useClientPortalSession } from '@/lib/hooks/useClientPortalSession';
-
-const {
-  proposalId,
-  setProposalId,
-  contactSession,
-  setContactSession,
-  hasValidSession,
-  refreshSession,
-} = useClientPortalSession();
-```
-
-**See:** `docs/CLIENT_PORTAL_SESSION.md` for full details
-
----
-
-## Authentication Flow
-
-### 1. Generate Portal Access (Owner Side - IgniteBD)
-
-Owner generates portal access for a contact:
-```
-POST /api/contacts/:contactId/generate-portal-access
-  → Creates Firebase account (passwordless)
-  → Stores firebaseUid in Contact.firebaseUid
-  → Generates InviteToken (24h expiration)
-  → Returns activation link: /activate?token=<token>
-```
-
-### 2. Contact Activation
-
-Contact clicks activation link:
-```
-GET /activate?token=<token>
-  → POST /api/activate (verifies token)
-  → Redirects to /set-password
-  → Contact sets password
-  → POST /api/set-password (sets Firebase password)
-  → Marks Contact.isActivated = true
-  → Redirects to /login?activated=true
-```
-
-### 3. Contact Login
-
-Contact logs in:
-```
-POST /login
-  → Firebase signInWithEmailAndPassword()
-  → GET /api/contacts/by-firebase-uid
-  → Store session in localStorage
-  → Redirect to /welcome
-```
-
-**See:** `CLIENT_PORTAL_LOGIN_FLOW.md` for detailed login flow
-
----
-
-## Data Relationships
-
-**What Clients See:**
-```
-Contact (Client)
-  ├── Proposal[] (Engagements)
-  │     ├── ConsultantDeliverable[] (What we're providing)
-  │     ├── Phases (Work structure)
-  │     ├── Milestones (Timeline)
-  │     └── Compensation (Payment schedule)
-  │
-  └── WorkPackage[] (Work artifacts)
-        └── WorkPackageItem[] (Blogs, Personas, Templates, etc.)
-```
-
-**Key Links:**
-- `Contact.firebaseUid` → Firebase Auth (universal personhood)
-- `Contact.contactCompanyId` → `Company.id` (Contact works for Company)
-- `Proposal.companyId` → `Company.id` (Proposal is for Company)
-- `ConsultantDeliverable.contactId` → `Contact.id` (Deliverable is for Contact)
-- `ConsultantDeliverable.proposalId` → `Proposal.id` (Deliverable from Proposal)
-- `WorkPackage.contactId` → `Contact.id` (Work package is for Contact)
-
----
-
-## API Endpoints (Client Portal)
-
-### Client Portal Endpoints
-
-**GET /api/client/state**
-- Get contact state for strategic routing
-- Returns: proposals, deliverables, routing decision
-- Auth: Required (Firebase token)
-
-**GET /api/proposals/:proposalId/portal**
-- Get portal data for proposal
-- Returns: client info, deliverables, payments, status
-- Auth: Optional (scoped by proposalId)
-
-**GET /api/contacts/:contactId/proposals**
-- Get all proposals for contact
-- Auth: Optional (scoped by contactId)
-
-**GET /api/contacts/by-email?email=xxx**
-- Find contact by email
-- Used during login
-- Auth: Optional
-
-**GET /api/contacts/by-firebase-uid**
-- Get contact by Firebase UID
-- Returns contact info including role
-- Auth: Required (Firebase token)
-
-**GET /api/invoices**
-- Get invoices for current contact/proposal
-- Auth: Required (Firebase token)
-
----
-
-## What Clients Can Do
-
-✅ **View Engagement Data:**
-- See all proposals for their company
-- View proposal details (phases, milestones)
-- Track deliverables (what we're providing)
-- Monitor engagement status
-
-✅ **Track Deliverables:**
-- See list of deliverables
-- View deliverable status
-- See due dates and completion dates
-- Filter by category
-
-✅ **View Payments:**
-- See payment schedule
-- View payment status
-- See upcoming payments
-- Pay invoices (Stripe integration)
-
-✅ **Manage Account:**
-- Change password
-- Update profile (future)
-
----
-
-## What Clients Cannot Do
-
-❌ **Create/Edit Proposals:**
-- Read-only view
-- Cannot modify proposals
-- Cannot create new proposals
-
-❌ **Update Deliverables:**
-- Cannot change deliverable status
-- Cannot add deliverables
-- Read-only view
-
-❌ **Access Other Tenants:**
-- Cannot see other clients' data
-- Scoped to their own company
-- Tenant isolation enforced
+- ❌ Strategic routing (proposal vs work)
+- ❌ Proposal views
+- ❌ Stage logic
+- ❌ Payment processing (Stripe scaffold only)
+- ❌ Timeline views
 
 ---
 
 ## Development Notes
-
-### Strategic Routing Logic
-
-The welcome page routes based on work state:
-
-```javascript
-// Work has started if:
-// 1. Deliverables with workContent (JSON field with actual work artifacts)
-// 2. OR deliverables with status "in-progress" or "completed"
-
-if (workHasStarted) {
-  route = '/dashboard';  // Show work view
-} else if (primaryProposal) {
-  route = `/proposals/${primaryProposal.id}`;  // Show proposal view
-} else {
-  route = '/dashboard';  // Fallback: Empty state
-}
-```
 
 ### Suspense Boundaries
 
@@ -475,32 +223,264 @@ function MyComponent() {
 }
 ```
 
-**See:** `app/dashboard/page.jsx` for example with `PaymentSuccessHandler`
-
-### Session Persistence
+### Session Storage
 
 Session data persists in `localStorage`:
+- `clientPortalContactId` - Contact ID
+- `clientPortalContactCompanyId` - Company ID
+- `clientPortalContactEmail` - Contact email
+- `firebaseId` - Firebase UID
+- `clientPortalWorkPackageId` - WorkPackage ID (if available)
+
+### API Client
+
+**Location:** `lib/api.js`
+
+**Configuration:**
+- `baseURL: ''` - Relative URLs (same origin)
+- Automatically adds Firebase token to all requests
+- Handles 401 errors (redirects to login)
+
+---
+
+## Session Management (localStorage)
+
+### Storage Keys
+
+All session data is stored in `localStorage`:
+
+**Contact & Auth:**
+- `clientPortalContactId` - Contact's database ID
+- `clientPortalContactCompanyId` - Company ID (used for company hydration)
+- `clientPortalContactEmail` - Contact's email
+- `firebaseId` - Firebase UID
+- `clientPortalWorkPackageId` - WorkPackage ID (from company hydration)
+
+### MVP1 Session Pattern
+
+**MVP1 uses direct `localStorage` access** (no hook):
+
+```javascript
+// Welcome - Store contact session
+localStorage.setItem('clientPortalContactId', contact.id);
+localStorage.setItem('clientPortalContactCompanyId', contact.contactCompanyId || '');
+localStorage.setItem('clientPortalContactEmail', contact.email || '');
+localStorage.setItem('firebaseId', firebaseUser.uid);
+
+// Dashboard - Read session and hydrate company
+const contactCompanyId = localStorage.getItem('clientPortalContactCompanyId');
+// Use contactCompanyId to get Company object with workPackages
+```
+
+### Legacy Session Hook (Deprecated in MVP1)
+
+The `useClientPortalSession` hook exists but is **not used in MVP1**. It's only used in legacy pages (onboarding).
+
+**Hook API (for reference):**
+```javascript
+import { useClientPortalSession } from '@/lib/hooks/useClientPortalSession';
+
+const {
+  proposalId,
+  setProposalId,
+  invoiceId,
+  setInvoiceId,
+  contactSession,
+  setContactSession,
+  hasValidSession,
+  refreshSession,
+  clearSession,
+} = useClientPortalSession();
+```
+
+**Note:** MVP1 simplified to direct `localStorage` access. The hook may be used in future versions when proposal-based routing is added.
+
+### Storage Behavior
+
+All data is stored in browser `localStorage`, which means:
 - ✅ Persists across page refreshes
-- ✅ Persists across browser sessions
+- ✅ Persists across browser sessions (until cleared)
 - ⚠️ Cleared when user clears browser data
 - ⚠️ Not shared across devices/browsers
 
 ---
 
-## Related Documentation
+## Activation & Login Flow
 
-- **`CLIENT_PORTAL_SESSION.md`** - Session management hook details
-- **`CLIENT_PORTAL_LOGIN_FLOW.md`** - Detailed login flow
-- **`WELCOME_ROUTER_ARCHITECTURE.md`** - Welcome router details
-- **`PROPOSAL_STRUCTURE.md`** - Proposal data structure
-- **`ACTIVATION_FLOW.md`** - Account activation flow
+The client portal has **two entry points**:
+1. **Activation Flow** - First-time setup via invite link (initiated from IgniteBD)
+2. **Login Flow** - Regular login after activation (the "front door")
+
+### Activation Flow (First-Time Setup)
+
+**Step 1: Owner generates portal access** (in IgniteBD)
+- Creates Firebase user (passwordless)
+- Stores `firebaseUid` in `Contact.firebaseUid`
+- Generates invite token
+
+**Step 2: Contact receives invite link:**
+```
+https://clientportal.ignitegrowth.biz/activate?token=abc123
+```
+
+**Step 3: Activate Account**
+- Route: `/activate`
+- Calls: `/api/activate` (client portal route)
+- What happens:
+  - Validates invite token
+  - Creates/links Firebase user
+  - Stores `firebaseUid` in `Contact.firebaseUid`
+  - Returns `uid`, `email`, `contactId`
+
+**Step 4: Set Password**
+- Route: `/set-password?uid=...&email=...&contactId=...`
+- Calls: `/api/set-password` (client portal route)
+- What happens:
+  - Sets Firebase password (via Firebase Admin)
+  - User can now login with email/password
+- Redirects to: `/login?activated=true`
+
+**Step 5: Login (Front Door)**
+- Route: `/login?activated=true`
+- User enters email and password
+- Uses Firebase Auth (`signInWithEmailAndPassword`)
+- Gets Firebase token
+- Calls `/api/contacts/by-firebase-uid` to get contact
+- Redirects to `/welcome`
+
+### Login Flow (Regular Access - The "Front Door")
+
+**Once password is set, users can ALWAYS go through the login page!**
+
+```
+1. User goes to /login (or /splash which routes to /login)
+   ↓
+2. User enters email and password
+   ↓
+3. Firebase Auth authenticates (signInWithEmailAndPassword)
+   ↓
+4. Get Firebase token
+   ↓
+5. Call /api/client/hydrate (find contact by firebaseUid)
+   ↓
+6. Store contact session in localStorage
+   ↓
+7. Redirect to /welcome (Contact hydration)
+   ↓
+8. Redirect to /dashboard (Company + WorkPackage hydration)
+```
+
+**Key Point:** After activation, the login page is the **primary entry point**. Users don't need invite links anymore - they can just login with email/password.
+
+### Splash Page Behavior
+
+The splash page (`/splash`) checks Firebase auth state:
+
+```javascript
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    // User is already logged in → go to welcome
+    router.replace('/welcome');
+  } else {
+    // No Firebase user → go to login (front door)
+    router.replace('/login');
+  }
+});
+```
+
+**This is correct behavior:**
+- If user is already logged in → skip login, go to welcome
+- If user is not logged in → go to login page
+
+### Authentication Methods
+
+**Current: Firebase Auth (Email/Password)**
+- Primary method
+- Uses `signInWithEmailAndPassword`
+- Token verified server-side via Firebase Admin
+- Contact looked up by `firebaseUid`
+
+**Legacy: JWT (Deprecated)**
+- Old method using `/api/auth/login`
+- Stores password hash in `Contact.notes.clientPortalAuth.passwordHash`
+- Still exists but not recommended
+- Firebase Auth is the standard
+
+### Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    First-Time Activation                    │
+└─────────────────────────────────────────────────────────────┘
+
+Invite Link
+    ↓
+/activate?token=abc123
+    ↓
+/api/activate (creates Firebase user, stores firebaseUid)
+    ↓
+/set-password?uid=...&email=...&contactId=...
+    ↓
+/api/set-password (sets Firebase password)
+    ↓
+/login?activated=true
+    ↓
+Firebase Auth (signInWithEmailAndPassword)
+    ↓
+/api/client/hydrate (find contact)
+    ↓
+/welcome → /dashboard
+
+┌─────────────────────────────────────────────────────────────┐
+│                    Regular Login (Front Door)                │
+└─────────────────────────────────────────────────────────────┘
+
+/login (or /splash → /login)
+    ↓
+Firebase Auth (signInWithEmailAndPassword)
+    ↓
+/api/client/hydrate (find contact)
+    ↓
+/welcome → /dashboard
+```
+
+**The activation flow is ONE-TIME:**
+- First time: Invite link → Activate → Set Password → Login
+- Every time after: Just login with email/password
 
 ---
 
-**Last Updated**: November 2025  
+## Work Artifact Architecture
+
+**How artifacts are displayed in the client portal:**
+
+WorkArtifacts are linked directly to WorkPackageItems. The `hydrateWorkPackage` service loads artifacts from the WorkArtifact model.
+
+**See:** `WORK_ARTIFACT_ARCHITECTURE.md` for detailed architecture
+
+---
+
+## Related Documentation
+
+**Core Guides:**
+- **`CLIENT_PORTAL_DEV_GUIDE.md`** - This document (authoritative source)
+
+**Architecture & Backend:**
+- **`CLIENT_PORTAL_ARCHITECTURE.md`** - **Single authority** for models, routes, database queries, and backend wiring
+
+**Feature-Specific:**
+- **`INVOICE_PAYMENT_SETUP.md`** - Invoice payment system (Stripe integration)
+- **`PROPOSAL_STRUCTURE.md`** - Proposal data structure (for future proposal views)
+- **`WORK_ARTIFACT_ARCHITECTURE.md`** - Detailed work artifact system architecture
+
+**Troubleshooting:**
+- **`buildprismaonvercel.md`** - Prisma build issues on Vercel
+
+---
+
+**Last Updated**: January 2025  
 **Focus**: Client-facing portal (what clients see)  
 **Architecture**: Contact-First (Universal Personhood)  
-**Hydration**: Proposals + WorkPackages + Deliverables  
-**Routing**: Strategic (proposal ready vs work started)  
-**Authentication**: Contact.email + Firebase
-
+**Hydration**: WorkPackage (primary) + Invoices  
+**Authentication**: Contact.email + Firebase  
+**MVP1**: Simple hydration, no routing logic

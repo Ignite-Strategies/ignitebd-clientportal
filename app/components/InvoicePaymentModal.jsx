@@ -16,7 +16,7 @@ export default function InvoicePaymentModal({ invoice, onClose, onSuccess }) {
     const createCheckoutSession = async () => {
       try {
         setLoading(true);
-        const response = await api.post(`/api/invoices/${invoice.id}/checkout`);
+        const response = await api.post(`/api/client/billing/${invoice.id}/checkout`);
         
         if (response.data?.success && response.data.clientSecret) {
           setClientSecret(response.data.clientSecret);

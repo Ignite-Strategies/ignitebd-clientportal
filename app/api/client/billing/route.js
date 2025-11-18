@@ -3,8 +3,12 @@ import { prisma } from '@/lib/prisma';
 import { verifyFirebaseToken } from '@/lib/firebaseAdmin';
 
 /**
- * GET /api/invoices
- * Get invoices for the authenticated client's proposal
+ * GET /api/client/billing
+ * Get invoices for the authenticated client's company
+ * 
+ * Architecture Pattern:
+ * - Verify Firebase token → Get Contact by firebaseUid
+ * - Use contactCompanyId (not crmId) to find invoices via proposals
  */
 export async function GET(request) {
   try {
@@ -19,43 +23,43 @@ export async function GET(request) {
       );
     }
     
-    // Get contact by Firebase UID
+    // Get contact's company (using contactCompanyId, not crmId)
     const contact = await prisma.contact.findUnique({
       where: { firebaseUid: decodedToken.uid },
-      include: {
-        contactCompany: {
-          include: {
-            proposals: {
-              include: {
-                invoices: {
-                  orderBy: { dueDate: 'asc' },
-                },
-              },
-            },
-          },
-        },
+      select: {
+        contactCompanyId: true, // Use contactCompanyId
       },
     });
 
-    if (!contact) {
+    if (!contact || !contact.contactCompanyId) {
       return NextResponse.json(
-        { success: false, error: 'Contact not found' },
+        { success: false, error: 'Contact or company not found' },
         { status: 404 }
       );
     }
 
-    // Get all invoices from all proposals for this contact's company
-    const invoices = [];
-    if (contact.contactCompany?.proposals) {
-      for (const proposal of contact.contactCompany.proposals) {
-        invoices.push(...proposal.invoices);
-      }
-    }
+    // Get invoices for company's proposals (following architecture doc pattern)
+    const invoices = await prisma.invoice.findMany({
+      where: {
+        proposal: {
+          companyId: contact.contactCompanyId, // Use contactCompanyId
+        },
+      },
+      include: {
+        proposal: {
+          select: {
+            id: true,
+            clientCompany: true, // Proposal title/name
+          },
+        },
+      },
+      orderBy: { dueDate: 'asc' },
+    });
 
     return NextResponse.json({
       success: true,
       invoices: invoices.map((invoice) => ({
-        id: invoice.id,
+        id: invoice.id, // invoiceId
         invoiceNumber: invoice.invoiceNumber,
         amount: invoice.amount,
         currency: invoice.currency,
@@ -63,10 +67,11 @@ export async function GET(request) {
         status: invoice.status,
         dueDate: invoice.dueDate,
         paidAt: invoice.paidAt,
-        week: invoice.week,
-        trigger: invoice.trigger,
-        proposalId: invoice.proposalId,
-        createdAt: invoice.createdAt,
+        paidByContactId: invoice.paidByContactId, // Who paid
+        proposal: {
+          id: invoice.proposal.id,
+          title: invoice.proposal.clientCompany, // Using clientCompany as title
+        },
       })),
     });
   } catch (error) {

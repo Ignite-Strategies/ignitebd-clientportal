@@ -294,6 +294,9 @@ model Invoice {
   stripeCheckoutSessionId String? @unique // Stripe checkout session ID
   stripePaymentIntentId   String? @unique // Stripe payment intent ID
   stripeCustomerId        String? // Stripe customer ID
+  
+  // Who paid (from checkout session metadata)
+  paidByContactId String? // Contact ID who made the payment
 
   // Dates
   dueDate   DateTime? // When payment is due

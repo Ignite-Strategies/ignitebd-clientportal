@@ -3,22 +3,19 @@ import { verifyFirebaseToken } from '@/lib/firebaseAdmin';
 import { prisma } from '@/lib/prisma';
 
 /**
- * GET /api/client/hydrate
+ * GET /api/client
  * Client Portal Contact Hydration
  * 
- * This is the main hydration endpoint for the client portal.
- * It finds the contact by Firebase UID and returns all necessary data
- * for the client portal session.
+ * Get contact and contactCompanyId for session setup
  * 
  * Architecture:
  * - User is authenticated via Firebase (token in header)
  * - Find contact by firebaseUid
- * - Return contact + company + proposals data
- * - This is Step 1 hydration (Contact Lookup/Retrieval)
+ * - Return contact + contactCompanyId
  */
 export async function GET(request) {
   try {
-    console.log('🔍 GET /api/client/hydrate - Starting contact hydration...');
+    console.log('🔍 GET /api/client - Starting contact hydration...');
     
     // Verify Firebase token (user must be authenticated)
     console.log('🔍 Verifying Firebase token...');
@@ -37,7 +34,7 @@ export async function GET(request) {
     const firebaseUid = decodedToken.uid;
     console.log('🔍 Looking up contact by firebaseUid:', firebaseUid);
 
-    // FIND contact by Firebase UID with all related data
+    // FIND contact by Firebase UID
     let contact;
     try {
       contact = await prisma.contact.findUnique({
@@ -58,8 +55,6 @@ export async function GET(request) {
               companyName: true,
             },
           },
-          // Include proposals for this contact's company
-          // (via contactCompanyId relationship)
         },
       });
       console.log('🔍 Contact lookup result:', contact ? `Found contact ${contact.id}` : 'Contact not found');
@@ -83,7 +78,7 @@ export async function GET(request) {
       );
     }
 
-    // Build hydration response (CONTACT ONLY - company/proposals hydrate on dashboard)
+    // Build hydration response (CONTACT + COMPANY)
     const hydrationData = {
       contact: {
         id: contact.id,
@@ -116,7 +111,7 @@ export async function GET(request) {
       data: hydrationData,
     });
   } catch (error) {
-    console.error('❌ ClientHydrate error:', error);
+    console.error('❌ Client hydration error:', error);
     console.error('❌ Error stack:', error.stack);
     console.error('❌ Error details:', {
       message: error.message,

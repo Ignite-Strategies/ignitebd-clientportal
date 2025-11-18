@@ -39,60 +39,73 @@ export default function ClientPortalDashboard() {
         return;
       }
 
-      /**
-       * MVP1: Simple hydration
-       * 1. Read contactId and contactCompanyId from localStorage
-       * 2. Call GET /api/client/engagement?companyId={contactCompanyId}
-       * 3. Display work package or empty state
-       */
-      const hydrateEngagement = async () => {
-        try {
-          // Read from localStorage
-          const contactId = typeof window !== 'undefined' 
-            ? localStorage.getItem('clientPortalContactId')
-            : null;
-          const contactCompanyId = typeof window !== 'undefined' 
-            ? localStorage.getItem('clientPortalContactCompanyId')
-            : null;
-          const storedEmail = typeof window !== 'undefined' 
-            ? localStorage.getItem('clientPortalContactEmail')
-            : null;
+          /**
+           * MVP1: Dashboard Hydration (Second Hydration)
+           * 1. Read contactCompanyId from localStorage (from Step 1: Welcome)
+           * 2. GET /api/client/engagement (hydrates company with workPackages)
+           * 3. Company object contains workPackageId
+           * 4. Display work package or empty state
+           */
+          const hydrateEngagement = async () => {
+            try {
+              // Read from localStorage (set in Step 1: Welcome)
+              const contactId = typeof window !== 'undefined' 
+                ? localStorage.getItem('clientPortalContactId')
+                : null;
+              const contactCompanyId = typeof window !== 'undefined' 
+                ? localStorage.getItem('clientPortalContactCompanyId')
+                : null;
+              const storedEmail = typeof window !== 'undefined' 
+                ? localStorage.getItem('clientPortalContactEmail')
+                : null;
+              const storedWorkPackageId = typeof window !== 'undefined'
+                ? localStorage.getItem('clientPortalWorkPackageId')
+                : null;
 
-          if (!contactId || !contactCompanyId) {
-            console.log('⚠️ No contact session found, redirecting to welcome');
-            router.replace('/welcome');
-            return;
-          }
+              if (!contactId || !contactCompanyId) {
+                console.log('⚠️ No contact session found, redirecting to welcome');
+                router.replace('/welcome');
+                return;
+              }
 
-          // Set contact email for greeting
-          if (storedEmail) {
-            setContactEmail(storedEmail);
-            // Extract first name from email (simple MVP1)
-            const firstName = storedEmail.split('@')[0].split('.')[0];
-            setContactName(firstName.charAt(0).toUpperCase() + firstName.slice(1));
-          }
+              // Set contact email for greeting
+              if (storedEmail) {
+                setContactEmail(storedEmail);
+                // Extract first name from email (simple MVP1)
+                const firstName = storedEmail.split('@')[0].split('.')[0];
+                setContactName(firstName.charAt(0).toUpperCase() + firstName.slice(1));
+              }
 
-           // Call engagement endpoint - can pass workPackageId if available
-           // For now, it will find by contactId (like main app pattern)
-           const engagementResponse = await api.get('/api/client/engagement');
+              // Second hydration: Get full company object with workPackages
+              // Engagement endpoint uses contactCompanyId to hydrate company
+              // Company object will have workPackages array with workPackageId
+              const engagementResponse = await api.get(
+                storedWorkPackageId 
+                  ? `/api/client/work?workPackageId=${storedWorkPackageId}`
+                  : '/api/client/work'
+              );
            
-           if (engagementResponse.data?.success) {
-             setWorkPackage(engagementResponse.data.workPackage);
-             // Store full engagement data in localStorage for artifact page
-             localStorage.setItem('clientPortalEngagement', JSON.stringify(engagementResponse.data));
-             // Store workPackageId if available
-             if (engagementResponse.data.workPackageId) {
-               localStorage.setItem('clientPortalWorkPackageId', engagementResponse.data.workPackageId);
-             }
-             // Store company info for display
-             if (engagementResponse.data.company) {
-               setContactName(engagementResponse.data.company.companyName || contactName);
-             }
-           }
+              if (engagementResponse.data?.success) {
+                setWorkPackage(engagementResponse.data.workPackage);
+                
+                // Store workPackageId from response
+                const wpId = engagementResponse.data.workPackageId || 
+                            engagementResponse.data.workPackage?.id ||
+                            engagementResponse.data.company?.workPackageId ||
+                            storedWorkPackageId;
+                if (wpId) {
+                  localStorage.setItem('clientPortalWorkPackageId', wpId);
+                }
+                
+                // Store company info for display
+                if (engagementResponse.data.company) {
+                  setContactName(engagementResponse.data.company.companyName || contactName);
+                }
+              }
 
           // Check for pending invoices (billing summary)
           try {
-            const invoicesResponse = await api.get('/api/invoices');
+            const invoicesResponse = await api.get('/api/client/billing');
             if (invoicesResponse.data?.success) {
               const invoices = invoicesResponse.data.invoices || [];
               const pending = invoices.filter((inv) => inv.status === 'pending');
@@ -265,10 +278,17 @@ export default function ClientPortalDashboard() {
                           <div>
                             {hasArtifacts ? (
                               <button
-                                onClick={() => router.push(`/work/${firstArtifact.id}`)}
+                                onClick={() => {
+                                  const wpId = localStorage.getItem('clientPortalWorkPackageId');
+                                  if (wpId) {
+                                    router.push(`/client/work/${wpId}`);
+                                  } else {
+                                    router.push(`/client/work/artifacts/${firstArtifact.id}`);
+                                  }
+                                }}
                                 className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition"
                               >
-                                View
+                                View Project
                               </button>
                             ) : (
                               <span className="px-4 py-2 text-gray-400 font-semibold">

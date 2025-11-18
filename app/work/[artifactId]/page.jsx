@@ -56,7 +56,7 @@ export default function WorkArtifactPage() {
 
       // Fallback: Fetch from API if not in cache
       try {
-        const artifactResponse = await api.get(`/api/work/${artifactId}`);
+        const artifactResponse = await api.get(`/api/client/work/${artifactId}`);
         if (artifactResponse.data?.success) {
           setArtifact(artifactResponse.data.artifact);
         }

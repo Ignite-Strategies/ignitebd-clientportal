@@ -11,8 +11,9 @@ The invoice payment system has been fully integrated into the client portal. Her
 - ✅ `prisma/migrations/add_invoice_model.sql` - Migration SQL (run when DATABASE_URL is set)
 
 **API Endpoints:**
-- ✅ `app/api/invoices/route.js` - List invoices
-- ✅ `app/api/invoices/[invoiceId]/checkout/route.js` - Create Stripe checkout
+- ✅ `app/api/client/billing/route.js` - List invoices (follows architecture pattern)
+- ✅ `app/api/client/billing/[invoiceId]/checkout/route.js` - Create Stripe checkout (follows architecture pattern)
+- ✅ `app/api/client/billing/[invoiceId]/verify/[sessionId]/route.js` - Verify payment (fallback)
 - ✅ `app/api/webhook/stripe/route.js` - Stripe webhook handler
 
 **Frontend:**
@@ -23,7 +24,7 @@ The invoice payment system has been fully integrated into the client portal. Her
 - ✅ `package.json` - Added Stripe packages
 
 **Documentation:**
-- ✅ `docs/INVOICE_PAYMENT_SETUP.md` - Complete setup guide
+- ✅ `docs/INVOICE_PAYMENT.md` - Complete guide (setup, flows, implementation)
 
 ## 🚀 Next Steps
 
@@ -108,5 +109,5 @@ stripe listen --forward-to localhost:3000/api/webhook/stripe
 - **Webhook not firing**: Verify webhook URL and secret in Stripe dashboard
 - **Invoice status not updating**: Check webhook logs in Stripe dashboard
 
-See `docs/INVOICE_PAYMENT_SETUP.md` for detailed troubleshooting.
+See `docs/INVOICE_PAYMENT.md` for detailed troubleshooting and complete documentation.
 

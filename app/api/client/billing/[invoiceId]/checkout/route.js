@@ -6,7 +6,7 @@ import Stripe from 'stripe';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 /**
- * POST /api/invoices/:invoiceId/checkout
+ * POST /api/client/billing/[invoiceId]/checkout
  * Create a Stripe checkout session for an invoice
  */
 export async function POST(request, { params }) {
@@ -30,20 +30,35 @@ export async function POST(request, { params }) {
       );
     }
 
-    // Get invoice with proposal and contact info
+    // Get contact by firebaseUid (following architecture pattern)
+    const contact = await prisma.contact.findUnique({
+      where: { firebaseUid: decodedToken.uid },
+      select: {
+        id: true, // contactId
+        email: true,
+        firstName: true,
+        lastName: true,
+        goesBy: true,
+        contactCompanyId: true, // Use contactCompanyId
+      },
+    });
+
+    if (!contact) {
+      return NextResponse.json(
+        { success: false, error: 'Contact not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get invoice with proposal (verify it belongs to contact's company)
     const invoice = await prisma.invoice.findUnique({
       where: { id: invoiceId },
       include: {
         proposal: {
-          include: {
-            company: {
-              include: {
-                contacts: {
-                  where: { firebaseUid: decodedToken.uid },
-                  take: 1,
-                },
-              },
-            },
+          select: {
+            id: true,
+            companyId: true, // Verify via companyId
+            clientCompany: true,
           },
         },
       },
@@ -56,10 +71,10 @@ export async function POST(request, { params }) {
       );
     }
 
-    // Verify the contact has access to this invoice
-    if (!invoice.proposal.company?.contacts?.[0]) {
+    // Verify invoice belongs to contact's company (using contactCompanyId)
+    if (invoice.proposal.companyId !== contact.contactCompanyId) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized - contact not associated with this invoice' },
+        { success: false, error: 'Unauthorized - invoice does not belong to your company' },
         { status: 403 }
       );
     }
@@ -71,8 +86,6 @@ export async function POST(request, { params }) {
         { status: 400 }
       );
     }
-
-    const contact = invoice.proposal.company.contacts[0];
     const frontendUrl = process.env.NEXT_PUBLIC_CLIENT_PORTAL_URL || 
                        (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
 
@@ -85,8 +98,8 @@ export async function POST(request, { params }) {
           ? `${contact.firstName} ${contact.lastName}` 
           : contact.goesBy || undefined,
         metadata: {
-          contactId: contact.id,
-          companyId: invoice.proposal.companyId || '',
+          contactId: contact.id, // Who is paying
+          companyId: contact.contactCompanyId || '', // Use contactCompanyId
         },
       });
       stripeCustomerId = customer.id;
@@ -122,7 +135,7 @@ export async function POST(request, { params }) {
         invoiceId: invoice.id,
         invoiceNumber: invoice.invoiceNumber,
         proposalId: invoice.proposalId,
-        contactId: contact.id,
+        contactId: contact.id, // CRITICAL: Who paid (stored in session metadata)
       },
       allow_promotion_codes: true,
     });

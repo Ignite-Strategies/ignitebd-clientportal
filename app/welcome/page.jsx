@@ -44,7 +44,7 @@ function WelcomeContent() {
       const hydrateContact = async () => {
         try {
           // Fetch contact by Firebase UID
-          const hydrationResponse = await api.get(`/api/client/hydrate`);
+          const hydrationResponse = await api.get(`/api/client`);
           
           if (hydrationResponse.data?.success && hydrationResponse.data.data) {
             const contact = hydrationResponse.data.data.contact;
@@ -63,6 +63,10 @@ function WelcomeContent() {
               localStorage.setItem('clientPortalContactCompanyId', contact.contactCompanyId || '');
               localStorage.setItem('clientPortalContactEmail', contact.email || '');
               localStorage.setItem('firebaseId', firebaseUid);
+              // Store workPackageId if available from company
+              if (hydrationResponse.data.data.workPackageId) {
+                localStorage.setItem('clientPortalWorkPackageId', hydrationResponse.data.data.workPackageId);
+              }
             }
             
             setLoading(false);

@@ -3,7 +3,7 @@ import { verifyFirebaseToken } from '@/lib/firebaseAdmin';
 import { prisma } from '@/lib/prisma';
 
 /**
- * GET /api/work/[artifactId]
+ * GET /api/client/work/artifacts/[artifactId]
  * Get a single artifact for client view
  * Validates that the artifact belongs to the authenticated contact's WorkPackage
  */

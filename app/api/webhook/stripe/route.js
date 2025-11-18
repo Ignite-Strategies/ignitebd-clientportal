@@ -44,6 +44,9 @@ export async function POST(request) {
       });
 
       if (invoice) {
+        // Extract contactId from session metadata (who paid)
+        const contactId = session.metadata?.contactId || null;
+        
         // Update invoice status to paid
         await prisma.invoice.update({
           where: { id: invoice.id },
@@ -51,10 +54,11 @@ export async function POST(request) {
             status: 'paid',
             paidAt: new Date(),
             stripePaymentIntentId: session.payment_intent || null,
+            paidByContactId: contactId, // Store who paid
           },
         });
 
-        console.log(`✅ Invoice ${invoice.invoiceNumber} marked as paid`);
+        console.log(`✅ Invoice ${invoice.invoiceNumber} marked as paid by contact ${contactId}`);
       } else {
         console.warn(`⚠️ Invoice not found for session ${session.id}`);
       }
@@ -66,16 +70,19 @@ export async function POST(request) {
       });
 
       if (invoice) {
+        const contactId = session.metadata?.contactId || null;
+        
         await prisma.invoice.update({
           where: { id: invoice.id },
           data: {
             status: 'paid',
             paidAt: new Date(),
             stripePaymentIntentId: session.payment_intent || null,
+            paidByContactId: contactId, // Store who paid
           },
         });
 
-        console.log(`✅ Invoice ${invoice.invoiceNumber} payment succeeded`);
+        console.log(`✅ Invoice ${invoice.invoiceNumber} payment succeeded (paid by contact ${contactId})`);
       }
     } else if (event.type === 'checkout.session.async_payment_failed') {
       const session = event.data.object;

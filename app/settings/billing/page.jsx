@@ -29,7 +29,7 @@ export default function BillingPage() {
 
       // Fetch invoices
       try {
-        const invoicesResponse = await api.get('/api/invoices');
+        const invoicesResponse = await api.get('/api/client/billing');
         if (invoicesResponse.data?.success) {
           setInvoices(invoicesResponse.data.invoices || []);
         }
