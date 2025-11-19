@@ -55,7 +55,7 @@ export async function GET(request) {
           id: true,
           title: true,
           description: true,
-          // prioritySummary: true, // TODO: Uncomment after migration runs
+          prioritySummary: true,
           contactId: true,
         },
       });
@@ -75,7 +75,7 @@ export async function GET(request) {
           id: true,
           title: true,
           description: true,
-          // prioritySummary: true, // TODO: Uncomment after migration runs
+          prioritySummary: true,
           contactId: true,
         },
         orderBy: { createdAt: 'desc' },
@@ -216,7 +216,7 @@ export async function GET(request) {
         id: workPackage.id,
         title: workPackage.title,
         description: workPackage.description,
-        prioritySummary: null, // TODO: Uncomment after migration runs - workPackage.prioritySummary || null,
+        prioritySummary: workPackage.prioritySummary || null,
       },
       stats,
       needsReviewItems: needsReviewItemsData,
