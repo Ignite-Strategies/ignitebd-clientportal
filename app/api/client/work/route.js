@@ -72,9 +72,20 @@ export async function GET(request) {
 
     if (finalWorkPackageId) {
       // Load work package with phases, items, and workCollateral
+      // Using select to exclude prioritySummary until migration runs
       workPackage = await prisma.workPackage.findUnique({
         where: { id: finalWorkPackageId },
-        include: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          // prioritySummary: true, // TODO: Uncomment after migration runs
+          totalCost: true,
+          effectiveStartDate: true,
+          contactId: true,
+          companyId: true,
+          createdAt: true,
+          updatedAt: true,
           contact: {
             select: { id: true, firstName: true, lastName: true, email: true }
           },
@@ -123,9 +134,20 @@ export async function GET(request) {
       }
     } else {
       // Fallback: Find work package by contactId (get the first/most recent one)
+      // Using select to exclude prioritySummary until migration runs
       workPackage = await prisma.workPackage.findFirst({
         where: { contactId: contact.id },
-        include: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          // prioritySummary: true, // TODO: Uncomment after migration runs
+          totalCost: true,
+          effectiveStartDate: true,
+          contactId: true,
+          companyId: true,
+          createdAt: true,
+          updatedAt: true,
           contact: {
             select: { id: true, firstName: true, lastName: true, email: true }
           },
@@ -193,7 +215,7 @@ export async function GET(request) {
         id: workPackage.id,
         title: workPackage.title,
         description: workPackage.description,
-        prioritySummary: workPackage.prioritySummary || null,
+        prioritySummary: null, // TODO: Uncomment after migration runs - workPackage.prioritySummary || null,
         phases: workPackage.phases || [],
         items: workPackage.items || [],
         contact: workPackage.contact,
