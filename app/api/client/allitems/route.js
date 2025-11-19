@@ -90,23 +90,48 @@ export async function GET(request) {
     }
 
     // Step 4: Get all items for stats (minimal fields only)
-    const allItems = await prisma.workPackageItem.findMany({
-      where: { workPackageId: workPackage.id },
-      select: {
-        id: true,
-        status: true,
-        deliverableLabel: true,
-        deliverableDescription: true,
-        workPackagePhaseId: true,
-        workCollateral: {
+    // Handle case where workCollateral table might not exist yet
+    let allItems = [];
+    try {
+      allItems = await prisma.workPackageItem.findMany({
+        where: { workPackageId: workPackage.id },
+        select: {
+          id: true,
+          status: true,
+          deliverableLabel: true,
+          deliverableDescription: true,
+          workPackagePhaseId: true,
+          workCollateral: {
+            select: {
+              id: true,
+              status: true,
+              reviewRequestedAt: true,
+              type: true,
+              title: true,
+            },
+          },
+        },
+      });
+    } catch (error) {
+      // If workCollateral table doesn't exist, query without it
+      if (error.code === 'P2021' && error.meta?.table === 'work_collateral') {
+        console.warn('⚠️ work_collateral table does not exist, querying without workCollateral relation');
+        allItems = await prisma.workPackageItem.findMany({
+          where: { workPackageId: workPackage.id },
           select: {
             id: true,
             status: true,
-            reviewRequestedAt: true,
+            deliverableLabel: true,
+            deliverableDescription: true,
+            workPackagePhaseId: true,
           },
-        },
-      },
-    });
+        });
+        // Add empty workCollateral array to each item for compatibility
+        allItems = allItems.map(item => ({ ...item, workCollateral: [] }));
+      } else {
+        throw error; // Re-throw if it's a different error
+      }
+    }
 
     // Step 5: Get all phases (metadata only)
     const allPhases = await prisma.workPackagePhase.findMany({

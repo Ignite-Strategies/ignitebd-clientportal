@@ -89,47 +89,100 @@ export async function GET(request) {
     }
 
     // Step 4: Load full WorkPackage with phases, items, workCollateral
-    const fullWorkPackage = await prisma.workPackage.findUnique({
-      where: { id: workPackageId },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        prioritySummary: true,
-        totalCost: true,
-        effectiveStartDate: true,
-        contact: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        company: {
-          select: {
-            id: true,
-            companyName: true,
-          },
-        },
-        phases: {
-          include: {
-            items: {
-              include: {
-                workCollateral: true, // Full workCollateral data
-              },
+    // Handle case where workCollateral table might not exist yet
+    let fullWorkPackage;
+    try {
+      fullWorkPackage = await prisma.workPackage.findUnique({
+        where: { id: workPackageId },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          prioritySummary: true,
+          totalCost: true,
+          effectiveStartDate: true,
+          contact: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
             },
           },
-          orderBy: { position: 'asc' },
-        },
-        items: {
-          include: {
-            workCollateral: true, // Full workCollateral data
+          company: {
+            select: {
+              id: true,
+              companyName: true,
+            },
           },
-          orderBy: { createdAt: 'asc' },
+          phases: {
+            include: {
+              items: {
+                include: {
+                  workCollateral: true, // Full workCollateral data
+                },
+              },
+            },
+            orderBy: { position: 'asc' },
+          },
+          items: {
+            include: {
+              workCollateral: true, // Full workCollateral data
+            },
+            orderBy: { createdAt: 'asc' },
+          },
         },
-      },
-    });
+      });
+    } catch (error) {
+      // If workCollateral table doesn't exist, query without it
+      if (error.code === 'P2021' && error.meta?.table === 'work_collateral') {
+        console.warn('⚠️ work_collateral table does not exist, querying without workCollateral relation');
+        fullWorkPackage = await prisma.workPackage.findUnique({
+          where: { id: workPackageId },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            prioritySummary: true,
+            totalCost: true,
+            effectiveStartDate: true,
+            contact: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+            company: {
+              select: {
+                id: true,
+                companyName: true,
+              },
+            },
+            phases: {
+              include: {
+                items: true, // Items without workCollateral
+              },
+              orderBy: { position: 'asc' },
+            },
+            items: {
+              orderBy: { createdAt: 'asc' },
+            },
+          },
+        });
+        // Add empty workCollateral array to each item for compatibility
+        if (fullWorkPackage) {
+          fullWorkPackage.phases = fullWorkPackage.phases.map(phase => ({
+            ...phase,
+            items: phase.items.map(item => ({ ...item, workCollateral: [] })),
+          }));
+          fullWorkPackage.items = fullWorkPackage.items.map(item => ({ ...item, workCollateral: [] }));
+        }
+      } else {
+        throw error; // Re-throw if it's a different error
+      }
+    }
 
     return NextResponse.json({
       success: true,
