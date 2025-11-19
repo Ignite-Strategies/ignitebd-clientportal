@@ -78,7 +78,36 @@ export async function GET(request) {
       );
     }
 
-    // Build hydration response (CONTACT + COMPANY)
+    // Find workPackageId (by contactId OR companyId)
+    // This is the ID-only lookup - full hydration happens on dashboard/workPackage pages
+    let workPackageId = null;
+    try {
+      const workPackage = await prisma.workPackage.findFirst({
+        where: {
+          OR: [
+            { contactId: contact.id },
+            // Also check companyId if contact has contactCompanyId
+            ...(contact.contactCompanyId ? [{ companyId: contact.contactCompanyId }] : []),
+          ],
+        },
+        select: {
+          id: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      
+      if (workPackage) {
+        workPackageId = workPackage.id;
+        console.log('✅ Found workPackageId:', workPackageId);
+      } else {
+        console.log('⚠️ No work package found for contact');
+      }
+    } catch (wpError) {
+      console.error('⚠️ Error fetching workPackageId:', wpError);
+      // Don't fail the whole request if workPackage lookup fails
+    }
+
+    // Build hydration response (CONTACT + COMPANY + WORKPACKAGE ID)
     const hydrationData = {
       contact: {
         id: contact.id,
@@ -98,12 +127,14 @@ export async function GET(request) {
             companyName: contact.contactCompany.companyName,
           }
         : null,
+      workPackageId: workPackageId, // ID only - no hydration
       firebaseUid: firebaseUid,
     };
 
     console.log('✅ Contact hydration complete:', {
       contactId: contact.id,
       companyId: contact.contactCompanyId,
+      workPackageId: workPackageId,
     });
 
     return NextResponse.json({

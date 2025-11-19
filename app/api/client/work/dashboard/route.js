@@ -57,26 +57,46 @@ export async function GET(request) {
           description: true,
           prioritySummary: true,
           contactId: true,
+          companyId: true,
         },
       });
 
-      // Verify work package belongs to this contact
-      if (workPackage && workPackage.contactId !== contact.id) {
-        return NextResponse.json(
-          { success: false, error: 'Unauthorized: Work package does not belong to this contact' },
-          { status: 403 },
-        );
+      // Verify work package belongs to this contact or their company
+      // Note: DB has companyId but should be contactCompanyId - checking both relationships
+      if (workPackage) {
+        const belongsToContact = workPackage.contactId === contact.id;
+        // Check if WorkPackage.companyId matches Contact.contactCompanyId
+        const belongsToCompany = contact.contactCompanyId && workPackage.companyId === contact.contactCompanyId;
+        
+        if (!belongsToContact && !belongsToCompany) {
+          return NextResponse.json(
+            { success: false, error: 'Unauthorized: Work package does not belong to this contact or company' },
+            { status: 403 },
+          );
+        }
       }
     } else {
-      // Fallback: Find work package by contactId (get the first/most recent one)
+      // Fallback: Find work package by contactId OR companyId
+      // Note: DB has companyId but should be contactCompanyId - checking both relationships
+      
+      // Build where clause to check both contactId and companyId in one query
+      const whereClause = {
+        OR: [
+          { contactId: contact.id },
+          // If contact has contactCompanyId, also check WorkPackage.companyId matches it
+          ...(contact.contactCompanyId ? [{ companyId: contact.contactCompanyId }] : []),
+        ],
+      };
+
       workPackage = await prisma.workPackage.findFirst({
-        where: { contactId: contact.id },
+        where: whereClause,
         select: {
           id: true,
           title: true,
           description: true,
           prioritySummary: true,
           contactId: true,
+          companyId: true,
         },
         orderBy: { createdAt: 'desc' },
       });

@@ -229,8 +229,11 @@ export default function ClientPortalDashboard() {
              <h2 className="text-3xl font-bold text-white mb-4">
                {contactName || 'Welcome'} 👋
              </h2>
-             <p className="text-xl text-gray-400">
-               Your engagement is being prepared.
+             <p className="text-xl text-gray-400 mb-2">
+               We apologize for the issue.
+             </p>
+             <p className="text-lg text-gray-500">
+               Someone will be in touch shortly.
              </p>
            </div>
          ) : (
