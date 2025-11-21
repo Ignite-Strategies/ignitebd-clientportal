@@ -161,36 +161,78 @@ export async function GET(request) {
       return status === "IN_REVIEW" || status === "CHANGES_NEEDED";
     });
 
-    // Step 8: Get phase statuses from database
-    const phasesWithStatus = await prisma.workPackagePhase.findMany({
-      where: { workPackageId: workPackage.id },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        position: true,
-        status: true,
-      },
-      orderBy: { position: 'asc' },
-    });
+    // Step 8: Get phases with status (if field exists in schema)
+    // Try to get status field - if it doesn't exist, we'll derive from items
+    let phasesWithStatus;
+    try {
+      phasesWithStatus = await prisma.workPackagePhase.findMany({
+        where: { workPackageId: workPackage.id },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          position: true,
+          status: true, // This may not exist in client portal schema yet
+        },
+        orderBy: { position: 'asc' },
+      });
+    } catch (error) {
+      // If status field doesn't exist, use allPhases and derive status from items
+      phasesWithStatus = allPhases.map(phase => ({
+        ...phase,
+        status: null, // Will derive from items
+      }));
+    }
 
     // Step 9: Determine current phase (first non-completed phase)
-    // Current phase = first phase that is not 'completed'
-    const currentPhase = phasesWithStatus.find(
-      (phase) => phase.status !== 'completed'
-    ) || null;
-
-    // Step 10: Get items for current phase only
-    let currentPhaseItems = [];
-    if (currentPhase) {
-      currentPhaseItems = allItems.filter(item => item.workPackagePhaseId === currentPhase.id);
+    // If status field exists, use it directly from DB
+    // Otherwise, derive from items (all items in phase must be APPROVED for phase to be completed)
+    let currentPhase = null;
+    
+    if (phasesWithStatus.length > 0) {
+      // Check if status field exists (not null)
+      const hasStatusField = phasesWithStatus[0].status !== undefined;
+      
+      if (hasStatusField) {
+        // Use status directly from database (mirrors IgniteBD execution)
+        currentPhase = phasesWithStatus.find(
+          (phase) => phase.status && phase.status !== 'completed'
+        ) || null;
+      } else {
+        // Derive status from items (fallback if status field doesn't exist)
+        for (const phase of phasesWithStatus) {
+          const phaseItems = allItems.filter(item => item.workPackagePhaseId === phase.id);
+          if (phaseItems.length === 0) {
+            // Phase has no items, consider it not_started
+            currentPhase = phase;
+            break;
+          }
+          // Check if all items are APPROVED
+          const allApproved = phaseItems.every(item => {
+            const status = mapItemStatus(item, item.workCollateral || []);
+            return status === 'APPROVED';
+          });
+          if (!allApproved) {
+            // Phase is not completed, this is the current phase
+            currentPhase = phase;
+            break;
+          }
+        }
+      }
     }
+
+    // Step 10: Return ALL items (dashboard should show all items, not just current phase)
+    // Current phase items are included in allItems
+    const currentPhaseItems = currentPhase
+      ? allItems.filter(item => item.workPackagePhaseId === currentPhase.id)
+      : [];
 
     return NextResponse.json({
       success: true,
       workPackageId: workPackage.id,
       stats,
       needsReviewItems,
+      allItems, // Return ALL items (dashboard should display all items)
       currentPhase: currentPhase
         ? {
             ...currentPhase,

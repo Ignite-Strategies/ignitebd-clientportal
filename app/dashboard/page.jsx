@@ -112,17 +112,11 @@ export default function ClientPortalDashboard() {
                 const wp = allItemsResponse.data.workPackage;
                 const stats = allItemsResponse.data.stats;
                 const needsReviewItems = allItemsResponse.data.needsReviewItems || [];
+                const allItems = allItemsResponse.data.allItems || []; // ALL items from API
                 const currentPhase = allItemsResponse.data.currentPhase;
                 
-                // Reconstruct workPackage object for compatibility
-                const items = [...needsReviewItems];
-                if (currentPhase?.items) {
-                  currentPhase.items.forEach(item => {
-                    if (!items.find(i => i.id === item.id)) {
-                      items.push(item);
-                    }
-                  });
-                }
+                // Use ALL items from API (dashboard should show all items)
+                const items = allItems.length > 0 ? allItems : [...needsReviewItems, ...(currentPhase?.items || [])];
                 
                 const phases = currentPhase ? [currentPhase] : [];
                 
@@ -130,7 +124,7 @@ export default function ClientPortalDashboard() {
                   ...wp,
                   stats,
                   needsReviewItems,
-                  items,
+                  items, // ALL items (not just needs review + current phase)
                   phases,
                   _dashboardData: allItemsResponse.data,
                 });
