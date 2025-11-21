@@ -346,6 +346,9 @@ model WorkPackagePhase {
   description         String?
   totalEstimatedHours Int?
 
+  // Status tracking (mirrors IgniteBD execution)
+  status String? // not_started | in_progress | completed
+
   items WorkPackageItem[]
 
   createdAt DateTime @default(now())

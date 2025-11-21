@@ -177,8 +177,20 @@ export async function GET(request) {
         orderBy: { position: 'asc' },
       });
     } catch (error) {
-      // If status field doesn't exist, use allPhases and derive status from items
-      phasesWithStatus = allPhases.map(phase => ({
+      // If status field doesn't exist, get phases without status and derive from items
+      console.warn('⚠️ WorkPackagePhase.status field does not exist in schema, deriving from items');
+      phasesWithStatus = await prisma.workPackagePhase.findMany({
+        where: { workPackageId: workPackage.id },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          position: true,
+        },
+        orderBy: { position: 'asc' },
+      });
+      // Add status: null to each phase (will derive from items)
+      phasesWithStatus = phasesWithStatus.map(phase => ({
         ...phase,
         status: null, // Will derive from items
       }));
