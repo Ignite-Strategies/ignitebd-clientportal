@@ -142,3 +142,42 @@ export function getStatusOptions(clientView = true) {
     label: labels[value],
   }));
 }
+
+/**
+ * Maps a WorkPackageItem to its current status
+ * Uses item.status directly from database (owner updates manually in execution hub)
+ * Everything reads from DB - no derivation
+ * Normalizes to canonical 5-status system
+ * 
+ * @param {Object} item - WorkPackageItem object (must have status field)
+ * @param {Array} workCollateral - Array of WorkCollateral objects (for future use)
+ * @returns {"NOT_STARTED" | "IN_PROGRESS" | "NEEDS_REVIEW" | "CHANGES_IN_PROGRESS" | "APPROVED"}
+ */
+export function mapItemStatus(item, workCollateral = []) {
+  // Use item.status directly from database (owner manually updates via execution hub)
+  // Everything reads from DB - no derivation
+  if (!item || !item.status) {
+    return STATUS_VALUES.NOT_STARTED;
+  }
+  
+  // Normalize enum value (Prisma returns enum as string)
+  const rawStatus = String(item.status).toUpperCase().trim();
+  
+  // Map database enum values to canonical values
+  const statusMap = {
+    // Old enum values → canonical
+    'DRAFT': STATUS_VALUES.NOT_STARTED,
+    'COMPLETED': STATUS_VALUES.APPROVED,
+    'IN_REVIEW': STATUS_VALUES.NEEDS_REVIEW,
+    'CHANGES_NEEDED': STATUS_VALUES.CHANGES_IN_PROGRESS,
+    // Canonical values (pass through)
+    'NEEDS_REVIEW': STATUS_VALUES.NEEDS_REVIEW,
+    'CHANGES_IN_PROGRESS': STATUS_VALUES.CHANGES_IN_PROGRESS,
+    'NOT_STARTED': STATUS_VALUES.NOT_STARTED,
+    'IN_PROGRESS': STATUS_VALUES.IN_PROGRESS,
+    'APPROVED': STATUS_VALUES.APPROVED,
+  };
+  
+  // Return mapped status or default to NOT_STARTED
+  return statusMap[rawStatus] || STATUS_VALUES.NOT_STARTED;
+}
