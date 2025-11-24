@@ -25,43 +25,17 @@ export async function GET(request) {
       );
     }
 
-    // Find the WorkItem (WorkPackageItem) for Joel
-    const workItemId = 'cmi2l87w1000jlb048diknzxh';
-    const workItem = await prisma.workPackageItem.findUnique({
-      where: { id: workItemId },
-      include: {
-        workCollateral: {
-          where: {
-            type: 'CLE_DECK',
-          },
-        },
-      },
+    // Hardcode the presentation ID directly (we know it from the duplication script)
+    // Presentation ID: cmicl19x00001nwwkryddib2k
+    const presentationId = 'cmicl19x00001nwwkryddib2k';
+    
+    const presentation = await prisma.presentation.findUnique({
+      where: { id: presentationId },
     });
-
-    if (!workItem) {
-      return NextResponse.json(
-        { success: false, error: 'WorkItem not found' },
-        { status: 404 },
-      );
-    }
-
-    // Find the presentation via WorkCollateral
-    let presentation = null;
-    for (const collateral of workItem.workCollateral) {
-      if (collateral.contentJson && typeof collateral.contentJson === 'object') {
-        const content = collateral.contentJson;
-        if (content.presentationId) {
-          presentation = await prisma.presentation.findUnique({
-            where: { id: content.presentationId },
-          });
-          if (presentation) break;
-        }
-      }
-    }
 
     if (!presentation) {
       return NextResponse.json(
-        { success: false, error: 'Presentation not found for this WorkItem' },
+        { success: false, error: 'Presentation not found' },
         { status: 404 },
       );
     }
@@ -72,6 +46,11 @@ export async function GET(request) {
     });
   } catch (error) {
     console.error('❌ GetPresentationForReview error:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      stack: error.stack,
+      prisma: typeof prisma,
+    });
     return NextResponse.json(
       {
         success: false,
