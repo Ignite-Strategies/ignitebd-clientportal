@@ -94,10 +94,10 @@ export default function PortalReviewCLEPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-red-600 mx-auto mb-4" />
-          <p className="text-gray-600 text-xl">Loading presentation...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-4" />
+          <p className="text-white text-xl">Loading presentation...</p>
         </div>
       </div>
     );
@@ -110,13 +110,13 @@ export default function PortalReviewCLEPage() {
   const sections = presentation.slides?.sections || [];
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800 py-8">
       <div className="max-w-4xl mx-auto px-4">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-white mb-2">
             BusinessPoint Law – CLE Presentation Draft
           </h1>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-300 text-lg">
             This is your outline. Add comments to any section.
           </p>
         </div>
@@ -128,14 +128,14 @@ export default function PortalReviewCLEPage() {
             return (
               <div
                 key={sectionIndex}
-                className="bg-white rounded-xl shadow-md p-6 border border-gray-200"
+                className="bg-gray-800 border border-gray-700 rounded-xl shadow-md p-6"
               >
-                <h2 className="text-xl font-bold text-gray-900 mb-4">
+                <h2 className="text-xl font-bold text-white mb-4">
                   {section.title}
                 </h2>
 
                 {section.bullets && section.bullets.length > 0 && (
-                  <ul className="list-disc list-inside mb-6 space-y-2 text-gray-700">
+                  <ul className="list-disc list-inside mb-6 space-y-2 text-gray-300">
                     {section.bullets.map((bullet, bulletIndex) => (
                       <li key={bulletIndex}>{bullet}</li>
                     ))}
@@ -143,7 +143,7 @@ export default function PortalReviewCLEPage() {
                 )}
 
                 <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Your Feedback
                   </label>
                   <textarea
@@ -152,7 +152,7 @@ export default function PortalReviewCLEPage() {
                       setComments({ ...comments, [sectionIndex]: e.target.value });
                     }}
                     rows={4}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none resize-none"
+                    className="w-full px-4 py-2 bg-gray-900 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500 outline-none resize-none placeholder:text-gray-500"
                     placeholder="Add your comments or feedback for this section..."
                   />
                 </div>
@@ -161,12 +161,12 @@ export default function PortalReviewCLEPage() {
                   <button
                     onClick={() => handleSaveFeedback(sectionIndex, comment)}
                     disabled={saving[sectionIndex]}
-                    className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {saving[sectionIndex] ? 'Saving...' : 'Save Feedback'}
                   </button>
                   {saved[sectionIndex] && (
-                    <span className="text-green-600 font-medium">Saved!</span>
+                    <span className="text-green-400 font-medium">Saved!</span>
                   )}
                 </div>
               </div>
