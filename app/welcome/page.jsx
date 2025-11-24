@@ -129,7 +129,7 @@ function WelcomeContent() {
   }, [router]);
 
   const handleContinue = () => {
-    router.replace('/dashboard');
+    router.replace('/portal/review');
   };
 
   // Show welcome message
