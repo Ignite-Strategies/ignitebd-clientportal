@@ -129,8 +129,7 @@ function WelcomeContent() {
   }, [router]);
 
   const handleContinue = () => {
-    // Redirect to review page instead of dashboard
-    router.replace('/portal/review');
+    router.replace('/dashboard');
   };
 
   // Show welcome message

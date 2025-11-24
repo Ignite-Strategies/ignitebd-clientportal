@@ -24,8 +24,7 @@ export default function SplashPage() {
         if (auth) {
           unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
-              // Redirect authenticated users directly to review page
-              router.replace('/portal/review');
+              router.replace('/welcome');
             } else {
               router.replace('/login');
             }
